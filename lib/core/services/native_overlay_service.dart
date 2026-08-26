@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class NativeOverlayService {
@@ -5,6 +6,7 @@ class NativeOverlayService {
 
   /// Toggle click-through mode on Windows (WS_EX_TRANSPARENT)
   static Future<bool> setClickThrough(bool enable) async {
+    if (kIsWeb) return false;
     try {
       final result = await _channel.invokeMethod<bool>('setClickThrough', {'enable': enable});
       return result ?? false;
@@ -15,6 +17,7 @@ class NativeOverlayService {
 
   /// Make the overlay window stay on top of fullscreen/borderless games
   static Future<bool> setAlwaysOnTop(bool enable) async {
+    if (kIsWeb) return false;
     try {
       final result = await _channel.invokeMethod<bool>('setAlwaysOnTop', {'enable': enable});
       return result ?? false;
@@ -25,6 +28,7 @@ class NativeOverlayService {
 
   /// Set overall window opacity (alpha)
   static Future<bool> setWindowOpacity(double opacity) async {
+    if (kIsWeb) return false;
     try {
       final result = await _channel.invokeMethod<bool>('setWindowOpacity', {'opacity': opacity.clamp(0.1, 1.0)});
       return result ?? false;
@@ -40,6 +44,7 @@ class NativeOverlayService {
     int width = 0,
     int height = 0,
   }) async {
+    if (kIsWeb) return null;
     try {
       final result = await _channel.invokeMapMethod<String, dynamic>('captureScreen', {
         'x': x,
@@ -61,6 +66,7 @@ class NativeOverlayService {
     int height = 0,
     String? language,
   }) async {
+    if (kIsWeb) return null;
     try {
       final result = await _channel.invokeMapMethod<String, dynamic>('recognizeText', {
         'x': x,

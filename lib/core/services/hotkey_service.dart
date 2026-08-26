@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 
@@ -27,6 +28,7 @@ class HotkeyService {
     required HotkeyCallback onSingleCapture,
     required HotkeyCallback onToggleScan,
   }) async {
+    if (kIsWeb) return;
     try {
       await hotKeyManager.unregisterAll();
 
@@ -50,6 +52,7 @@ class HotkeyService {
   }
 
   static Future<void> dispose() async {
+    if (kIsWeb) return;
     try {
       await hotKeyManager.unregisterAll();
     } catch (_) {}
