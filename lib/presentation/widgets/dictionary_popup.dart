@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/dictionary_service.dart';
+import '../../core/services/tts_service.dart';
 import '../providers/history_provider.dart';
 
 class DictionaryPopup extends ConsumerStatefulWidget {
@@ -50,6 +51,26 @@ class _DictionaryPopupState extends ConsumerState<DictionaryPopup> {
     );
   }
 
+  void _playPronunciation(String word) {
+    final _ = TtsService.getAudioStreamUrl(word, language: widget.sourceLang);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.volume_up, color: Colors.cyanAccent, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Phát âm giọng đọc AI: "$word"'),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xFF0F172A),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -78,7 +99,7 @@ class _DictionaryPopupState extends ConsumerState<DictionaryPopup> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Word & Pronunciation/Reading
+              // Word & Pronunciation/Reading & Actions
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -95,13 +116,27 @@ class _DictionaryPopupState extends ConsumerState<DictionaryPopup> {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                        Text(
-                          def.word,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                def.word,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.volume_up_outlined, color: Colors.cyanAccent, size: 22),
+                              tooltip: 'Phát âm giọng đọc AI',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => _playPronunciation(def.word),
+                            ),
+                          ],
                         ),
                       ],
                     ),

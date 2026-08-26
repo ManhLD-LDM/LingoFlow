@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../domain/entities/subtitle_style.dart';
 import '../providers/settings_provider.dart';
 import '../providers/overlay_provider.dart';
 import '../../core/services/native_overlay_service.dart';
@@ -32,6 +33,7 @@ class _OverlayScreenState extends ConsumerState<OverlayScreen> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final overlay = ref.watch(overlayProvider);
+    final theme = settings.subtitleTheme;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -61,8 +63,52 @@ class _OverlayScreenState extends ConsumerState<OverlayScreen> {
               },
             ),
 
-          // Render Live Translation Subtitle / Bubble Cards over the screen
-          if (overlay.items.isNotEmpty)
+          // Render Subtitles in Bottom Center Cinema Mode
+          if (settings.subtitlePlacement == SubtitlePlacement.bottomCenter && overlay.items.isNotEmpty)
+            Positioned(
+              bottom: 40,
+              left: 40,
+              right: 40,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: theme.backgroundColor.withValues(alpha: settings.overlayOpacity),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: theme.borderColor, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        blurRadius: 16,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: overlay.items.map((item) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          item.translatedText,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: theme.textColor,
+                            fontSize: settings.fontSize + 2,
+                            fontWeight: FontWeight.bold,
+                            height: 1.4,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ),
+
+          // Render Subtitles in In-Place Mode
+          if (settings.subtitlePlacement == SubtitlePlacement.inPlace && overlay.items.isNotEmpty)
             ...overlay.items.map((item) {
               return Positioned(
                 left: item.boundingBox.left,
@@ -82,12 +128,12 @@ class _OverlayScreenState extends ConsumerState<OverlayScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A).withValues(alpha: settings.overlayOpacity),
+                      color: theme.backgroundColor.withValues(alpha: settings.overlayOpacity),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: settings.isClickThrough
-                            ? Colors.cyanAccent.withValues(alpha: 0.5)
-                            : Colors.orangeAccent.withValues(alpha: 0.8),
+                            ? theme.borderColor.withValues(alpha: 0.6)
+                            : Colors.orangeAccent.withValues(alpha: 0.9),
                         width: 1.5,
                       ),
                       boxShadow: [
@@ -105,7 +151,7 @@ class _OverlayScreenState extends ConsumerState<OverlayScreen> {
                         Text(
                           item.translatedText,
                           style: TextStyle(
-                            color: Colors.white,
+                            color: theme.textColor,
                             fontSize: settings.fontSize,
                             fontWeight: FontWeight.w600,
                             height: 1.35,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/settings_provider.dart';
 import '../../domain/entities/translation_engine.dart';
+import '../../domain/entities/subtitle_style.dart';
 import '../../data/datasources/remote/deep_l_api.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -227,6 +228,117 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 24),
 
+          // Section: Subtitle Style & Presets
+          const Text(
+            'PHONG CÁCH & VỊ TRÍ PHỤ ĐỀ (SUBTITLE STYLING)',
+            style: TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Giao diện mẫu (Theme Preset):', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: SubtitleTheme.values.map((theme) {
+                    final isSelected = theme == settings.subtitleTheme;
+                    return InkWell(
+                      onTap: () => notifier.setSubtitleTheme(theme),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: theme.backgroundColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected ? Colors.cyanAccent : theme.borderColor,
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              theme.name,
+                              style: TextStyle(
+                                color: theme.textColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (isSelected) ...[
+                              const SizedBox(width: 6),
+                              const Icon(Icons.check_circle, size: 14, color: Colors.cyanAccent),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const Divider(color: Colors.white10, height: 24),
+                const Text('Vị trí hiển thị:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => notifier.setSubtitlePlacement(SubtitlePlacement.inPlace),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: settings.subtitlePlacement == SubtitlePlacement.inPlace
+                                ? Colors.cyanAccent.withValues(alpha: 0.1)
+                                : const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: settings.subtitlePlacement == SubtitlePlacement.inPlace
+                                  ? Colors.cyanAccent
+                                  : Colors.white12,
+                            ),
+                          ),
+                          child: const Text('Đè lên vị trí gốc (In-place)', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => notifier.setSubtitlePlacement(SubtitlePlacement.bottomCenter),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: settings.subtitlePlacement == SubtitlePlacement.bottomCenter
+                                ? Colors.cyanAccent.withValues(alpha: 0.1)
+                                : const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: settings.subtitlePlacement == SubtitlePlacement.bottomCenter
+                                  ? Colors.cyanAccent
+                                  : Colors.white12,
+                            ),
+                          ),
+                          child: const Text('Phía dưới (Movie Subtitle)', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
           // Section: Overlay Behavior
           const Text(
             'HÀNH VI OVERLAY (CHẾ ĐỘ XUYÊN THẤU)',
@@ -311,7 +423,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           // Section: Appearance
           const Text(
-            'GIAO DIỆN HIỂN THỊ OVERLAY',
+            'ĐỘ MỜ & CỠ CHỮ',
             style: TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
