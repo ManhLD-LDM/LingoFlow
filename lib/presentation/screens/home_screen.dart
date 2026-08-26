@@ -36,7 +36,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         NativeOverlayService.setClickThrough(next);
       },
       onSingleCapture: () async {
-        // Trigger single capture
+        await ref.read(overlayProvider.notifier).performScanCycle();
       },
       onToggleScan: () {
         final isScanning = ref.read(overlayProvider).isScanning;
