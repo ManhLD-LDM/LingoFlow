@@ -55,7 +55,7 @@ void FlutterWindow::SetupNativeMethodChannel() {
 
           SetWindowLongPtr(hwnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
           LONG_PTR exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-          SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED | WS_EX_TOPMOST);
+          SetWindowLongPtr(hwnd, GWL_EXSTYLE, (exStyle & ~WS_EX_LAYERED) | WS_EX_TOPMOST);
 
           MARGINS margins = {-1, -1, -1, -1};
           DwmExtendFrameIntoClientArea(hwnd, &margins);
@@ -66,7 +66,7 @@ void FlutterWindow::SetupNativeMethodChannel() {
         } else if (method == "exitOverlayMode") {
           SetWindowLongPtr(hwnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
           LONG_PTR exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-          SetWindowLongPtr(hwnd, GWL_EXSTYLE, (exStyle & ~WS_EX_TOPMOST) | WS_EX_LAYERED);
+          SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_TOPMOST);
 
           SetWindowPos(hwnd, HWND_NOTOPMOST, 100, 100, 1280, 720,
                        SWP_SHOWWINDOW | SWP_FRAMECHANGED);
@@ -84,7 +84,7 @@ void FlutterWindow::SetupNativeMethodChannel() {
           if (enable) {
             SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED);
           } else {
-            SetWindowLongPtr(hwnd, GWL_EXSTYLE, (exStyle & ~WS_EX_TRANSPARENT) | WS_EX_LAYERED);
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, (exStyle & ~WS_EX_TRANSPARENT));
           }
           SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
@@ -111,9 +111,13 @@ void FlutterWindow::SetupNativeMethodChannel() {
             }
           }
           LONG_PTR exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-          SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED);
-          BYTE alpha = static_cast<BYTE>(opacity * 255.0);
-          SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
+          if (opacity < 0.99) {
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED);
+            BYTE alpha = static_cast<BYTE>(opacity * 255.0);
+            SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
+          } else {
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_LAYERED);
+          }
           result->Success(flutter::EncodableValue(true));
         } else if (method == "captureScreen") {
           const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
