@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/text_processor.dart';
+import '../../core/services/native_overlay_service.dart';
 import '../providers/settings_provider.dart';
 import '../providers/overlay_provider.dart';
 import '../providers/history_provider.dart';
@@ -18,9 +19,9 @@ class FloatingLens extends ConsumerStatefulWidget {
 }
 
 class _FloatingLensState extends ConsumerState<FloatingLens> {
-  // Lens position and dimensions
-  Offset _position = const Offset(150, 150);
-  Size _size = const Size(480, 260);
+  // Lens position and dimensions on the global desktop screen
+  Offset _position = const Offset(200, 200);
+  Size _size = const Size(500, 280);
 
   bool _isLiveScanning = false;
   bool _isProcessing = false;
@@ -31,9 +32,22 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
   String? _errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    // Ensure native overlay mode is active
+    NativeOverlayService.enterOverlayMode();
+  }
+
+  @override
   void dispose() {
     _liveTimer?.cancel();
     super.dispose();
+  }
+
+  void _closeLens() {
+    _liveTimer?.cancel();
+    NativeOverlayService.exitOverlayMode();
+    widget.onClose();
   }
 
   void _toggleLiveScanning() {
@@ -74,17 +88,21 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
 
       final rawText = ocrResult.fullText.trim();
       if (rawText.isEmpty) {
-        setState(() {
-          _isProcessing = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+          });
+        }
         return;
       }
 
       final cleanedText = TextProcessor.cleanOcrText(rawText, language: settings.sourceLanguage);
       if (cleanedText.isEmpty) {
-        setState(() {
-          _isProcessing = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+          });
+        }
         return;
       }
 
@@ -128,6 +146,7 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
 
     return Stack(
       children: [
+        // 1. Resizable & Draggable Floating Frame (Hollow / See-through viewport)
         Positioned(
           left: _position.dx,
           top: _position.dy,
@@ -136,41 +155,41 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
             height: _size.height,
             child: Stack(
               children: [
-                // 1. The Transparent Viewfinder (Lỗ kính nhìn xuyên xuống game/truyện)
+                // The Hollow Viewfinder Frame (Hoàn toàn trong suốt 100%, không màu nền)
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: _isLiveScanning ? Colors.greenAccent : Colors.cyanAccent,
-                        width: 2.5,
+                        width: 2.0,
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: (_isLiveScanning ? Colors.greenAccent : Colors.cyanAccent)
-                              .withValues(alpha: 0.25),
-                          blurRadius: 16,
-                          spreadRadius: 2,
+                              .withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          spreadRadius: 1,
                         ),
                       ],
                     ),
                   ),
                 ),
 
-                // Corner crosshairs to indicate active capture zone
+                // Crosshairs to indicate active capture zone
                 Positioned(
-                  top: 45,
-                  left: 10,
-                  child: Icon(Icons.crop_free, size: 20, color: Colors.cyanAccent.withValues(alpha: 0.6)),
+                  top: 42,
+                  left: 6,
+                  child: Icon(Icons.crop_free, size: 16, color: Colors.cyanAccent.withValues(alpha: 0.7)),
                 ),
                 Positioned(
-                  bottom: 10,
-                  right: 10,
-                  child: Icon(Icons.crop_free, size: 20, color: Colors.cyanAccent.withValues(alpha: 0.6)),
+                  bottom: 6,
+                  right: 6,
+                  child: Icon(Icons.crop_free, size: 16, color: Colors.cyanAccent.withValues(alpha: 0.7)),
                 ),
 
-                // 2. Attached Floating Control Header Bar (Có thể kéo thả để di chuyển khung)
+                // 2. Attached Floating Header Bar (Kéo thả để di chuyển khung trên toàn màn hình)
                 Positioned(
                   top: 0,
                   left: 0,
@@ -182,11 +201,11 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                       });
                     },
                     child: Container(
-                      height: 38,
+                      height: 36,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0F172A).withValues(alpha: 0.95),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
                         border: Border(
                           bottom: BorderSide(
                             color: _isLiveScanning ? Colors.greenAccent : Colors.cyanAccent,
@@ -196,10 +215,10 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.drag_indicator, color: Colors.white60, size: 16),
-                          const SizedBox(width: 4),
+                          const Icon(Icons.drag_indicator, color: Colors.white70, size: 16),
+                          const SizedBox(width: 6),
                           Text(
-                            _isLiveScanning ? '🔴 LIVE SCANNING' : '🔍 KHUNG DỊCH',
+                            _isLiveScanning ? '🔴 LIVE DỊCH' : '🔍 KHUNG DỊCH',
                             style: TextStyle(
                               color: _isLiveScanning ? Colors.greenAccent : Colors.cyanAccent,
                               fontSize: 11,
@@ -220,10 +239,10 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                                 : const Icon(Icons.translate, color: Colors.cyanAccent, size: 18),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            tooltip: 'Dịch vùng này ngay (Alt+S)',
+                            tooltip: 'Dịch vùng này (Alt+S)',
                             onPressed: _isProcessing ? null : _captureAndTranslate,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
 
                           // Live Scanning Toggle
                           IconButton(
@@ -237,7 +256,7 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                             tooltip: _isLiveScanning ? 'Tạm dừng quét liên tục' : 'Bật quét liên tục theo thời gian thực',
                             onPressed: _toggleLiveScanning,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
 
                           // Close Lens Button
                           IconButton(
@@ -245,7 +264,7 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             tooltip: 'Đóng khung dịch',
-                            onPressed: widget.onClose,
+                            onPressed: _closeLens,
                           ),
                         ],
                       ),
@@ -260,22 +279,22 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                   child: GestureDetector(
                     onPanUpdate: (details) {
                       setState(() {
-                        final newW = (_size.width + details.delta.dx).clamp(240.0, 900.0);
-                        final newH = (_size.height + details.delta.dy).clamp(140.0, 700.0);
+                        final newW = (_size.width + details.delta.dx).clamp(200.0, 1400.0);
+                        final newH = (_size.height + details.delta.dy).clamp(120.0, 900.0);
                         _size = Size(newW, newH);
                       });
                     },
                     child: Container(
-                      width: 24,
-                      height: 24,
+                      width: 22,
+                      height: 22,
                       decoration: const BoxDecoration(
                         color: Color(0xFF0F172A),
-                        borderRadius: orgBorderRadius ?? BorderRadius.only(
-                          topLeft: Radius.circular(8),
-                          bottomRight: Radius.circular(10),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(6),
+                          bottomRight: Radius.circular(8),
                         ),
                       ),
-                      child: const Icon(Icons.south_east, color: Colors.cyanAccent, size: 14),
+                      child: const Icon(Icons.south_east, color: Colors.cyanAccent, size: 13),
                     ),
                   ),
                 ),
@@ -284,12 +303,12 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
           ),
         ),
 
-        // 4. Live Floating Result Box (Hiển thị bản dịch nổi gắn liền ngay dưới/trên Khung)
+        // 4. Live Floating Result Card (Hiển thị bản dịch đè lên ngay cạnh khung)
         if (_translatedResult.isNotEmpty)
           Positioned(
             left: _position.dx,
-            top: (_position.dy + _size.height + 8).clamp(20.0, MediaQuery.of(context).size.height - 180),
-            width: _size.width,
+            top: (_position.dy + _size.height + 6).clamp(10.0, MediaQuery.of(context).size.height - 180),
+            width: _size.width.clamp(280.0, 800.0),
             child: GestureDetector(
               onTap: () {
                 DictionaryPopup.show(
@@ -300,15 +319,16 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: theme.backgroundColor.withValues(alpha: 0.95),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: theme.borderColor, width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.7),
-                      blurRadius: 14,
+                      color: Colors.black.withValues(alpha: 0.8),
+                      blurRadius: 16,
+                      spreadRadius: 2,
                     ),
                   ],
                 ),
@@ -354,7 +374,7 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       _translatedResult,
                       style: TextStyle(
@@ -386,7 +406,7 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
         if (_errorMessage != null)
           Positioned(
             left: _position.dx,
-            top: _position.dy + _size.height + 8,
+            top: _position.dy + _size.height + 6,
             width: _size.width,
             child: Container(
               padding: const EdgeInsets.all(10),
@@ -404,5 +424,3 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
     );
   }
 }
-
-const BorderRadius? orgBorderRadius = null;

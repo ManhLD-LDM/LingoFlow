@@ -4,6 +4,7 @@
 #include <vector>
 #include <flutter/standard_method_codec.h>
 #include <windows.h>
+#include <dwmapi.h>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -48,7 +49,29 @@ void FlutterWindow::SetupNativeMethodChannel() {
         const std::string& method = call.method_name();
         HWND hwnd = GetHandle();
 
-        if (method == "setClickThrough") {
+        if (method == "enterOverlayMode") {
+          int screenW = GetSystemMetrics(SM_CXSCREEN);
+          int screenH = GetSystemMetrics(SM_CYSCREEN);
+
+          SetWindowLongPtr(hwnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+          LONG_PTR exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+          SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED | WS_EX_TOPMOST);
+
+          MARGINS margins = {-1, -1, -1, -1};
+          DwmExtendFrameIntoClientArea(hwnd, &margins);
+
+          SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, screenW, screenH,
+                       SWP_SHOWWINDOW | SWP_FRAMECHANGED);
+          result->Success(flutter::EncodableValue(true));
+        } else if (method == "exitOverlayMode") {
+          SetWindowLongPtr(hwnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
+          LONG_PTR exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+          SetWindowLongPtr(hwnd, GWL_EXSTYLE, (exStyle & ~WS_EX_TOPMOST) | WS_EX_LAYERED);
+
+          SetWindowPos(hwnd, HWND_NOTOPMOST, 100, 100, 1280, 720,
+                       SWP_SHOWWINDOW | SWP_FRAMECHANGED);
+          result->Success(flutter::EncodableValue(true));
+        } else if (method == "setClickThrough") {
           const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
           bool enable = false;
           if (args) {

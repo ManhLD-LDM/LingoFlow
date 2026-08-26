@@ -4,6 +4,28 @@ import 'package:flutter/services.dart';
 class NativeOverlayService {
   static const MethodChannel _channel = MethodChannel('com.lingoflow/native');
 
+  /// Switch the application window into a full-screen borderless transparent overlay
+  static Future<bool> enterOverlayMode() async {
+    if (kIsWeb) return false;
+    try {
+      final result = await _channel.invokeMethod<bool>('enterOverlayMode');
+      return result ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Restore the window back to standard dashboard window size with title bar
+  static Future<bool> exitOverlayMode() async {
+    if (kIsWeb) return false;
+    try {
+      final result = await _channel.invokeMethod<bool>('exitOverlayMode');
+      return result ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Toggle click-through mode on Windows (WS_EX_TRANSPARENT)
   static Future<bool> setClickThrough(bool enable) async {
     if (kIsWeb) return false;
