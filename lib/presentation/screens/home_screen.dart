@@ -5,8 +5,10 @@ import '../../core/services/native_overlay_service.dart';
 import '../../core/services/hotkey_service.dart';
 import '../providers/settings_provider.dart';
 import '../providers/overlay_provider.dart';
+import '../providers/history_provider.dart';
 import 'settings_screen.dart';
 import 'overlay_screen.dart';
+import 'history_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -62,6 +64,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final result = await repo.translate(
       text: text,
+      sourceLanguage: settings.sourceLanguage,
+      targetLanguage: settings.targetLanguage,
+    );
+
+    // Save to History
+    ref.read(historyProvider.notifier).addRecord(
+      originalText: text,
+      translatedText: result,
       sourceLanguage: settings.sourceLanguage,
       targetLanguage: settings.targetLanguage,
     );
@@ -125,7 +135,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.history, color: Colors.cyanAccent),
+            tooltip: 'Lịch sử & Sổ từ vựng',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HistoryScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.white70),
+            tooltip: 'Cài đặt',
             onPressed: () {
               Navigator.push(
                 context,

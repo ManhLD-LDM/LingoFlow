@@ -7,6 +7,7 @@ import '../../domain/repositories/ocr_repository.dart';
 import '../../data/repositories/translation_repository_impl.dart';
 import '../../data/repositories/ocr_repository_impl.dart';
 import 'settings_provider.dart';
+import 'history_provider.dart';
 
 final translationRepositoryProvider = Provider<TranslationRepository>((ref) {
   return TranslationRepositoryImpl();
@@ -134,6 +135,14 @@ class OverlayNotifier extends Notifier<OverlayState> {
               timestamp: DateTime.now(),
             ),
           );
+
+          // Save to History
+          ref.read(historyProvider.notifier).addRecord(
+            originalText: block.text,
+            translatedText: translated,
+            sourceLanguage: settings.sourceLanguage,
+            targetLanguage: settings.targetLanguage,
+          );
         }
       } else {
         // Fallback for single full text
@@ -153,6 +162,14 @@ class OverlayNotifier extends Notifier<OverlayState> {
             targetLanguage: settings.targetLanguage,
             timestamp: DateTime.now(),
           ),
+        );
+
+        // Save to History
+        ref.read(historyProvider.notifier).addRecord(
+          originalText: rawText,
+          translatedText: translated,
+          sourceLanguage: settings.sourceLanguage,
+          targetLanguage: settings.targetLanguage,
         );
       }
 
