@@ -2,7 +2,7 @@
 
 #include <optional>
 #include <vector>
-#include <string>
+#include <flutter/standard_method_codec.h>
 #include <windows.h>
 
 #include "flutter/generated_plugin_registrant.h"
@@ -19,21 +19,19 @@ bool FlutterWindow::OnCreate() {
 
   RECT frame = GetClientArea();
 
+  // The size here must match the window dimensions to avoid unnecessary surface
+  // creation / resizing in the startup path.
   flutter_controller_ = std::make_unique<flutter::FlutterViewController>(
       frame.right - frame.left, frame.bottom - frame.top, project_);
+  // Ensure that basic setup of the controller was successful.
   if (!flutter_controller_->engine() || !flutter_controller_->view()) {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
-  SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   SetupNativeMethodChannel();
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
-  });
-
-  flutter_controller_->ForceRedraw();
+  SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   return true;
 }
@@ -47,12 +45,12 @@ void FlutterWindow::SetupNativeMethodChannel() {
   native_channel_->SetMethodCallHandler(
       [this](const flutter::MethodCall<flutter::EncodableValue>& call,
              std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-        HWND hwnd = GetHandle();
         const std::string& method = call.method_name();
+        HWND hwnd = GetHandle();
 
         if (method == "setClickThrough") {
           const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
-          bool enable = true;
+          bool enable = false;
           if (args) {
             auto it = args->find(flutter::EncodableValue("enable"));
             if (it != args->end() && std::holds_alternative<bool>(it->second)) {
@@ -141,7 +139,6 @@ void FlutterWindow::SetupNativeMethodChannel() {
           result->Success(flutter::EncodableValue(response));
         } else if (method == "recognizeText") {
           // Native OCR bridge response structure
-          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
           flutter::EncodableList blocksList;
           std::string fullText = "";
 
@@ -155,18 +152,11 @@ void FlutterWindow::SetupNativeMethodChannel() {
       });
 }
 
-void FlutterWindow::OnDestroy() {
-  if (flutter_controller_) {
-    flutter_controller_ = nullptr;
-  }
-
-  Win32Window::OnDestroy();
-}
-
 LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
         flutter_controller_->HandleTopLevelWindowProc(hwnd, message, wparam,
@@ -183,4 +173,12 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
+}
+
+void FlutterWindow::OnDestroy() {
+  if (flutter_controller_) {
+    flutter_controller_ = nullptr;
+  }
+
+  Win32Window::OnDestroy();
 }
