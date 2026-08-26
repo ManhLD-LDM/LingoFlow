@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/languages.dart';
 import '../../domain/entities/translation_engine.dart';
+import '../../domain/entities/subtitle_style.dart';
 
 class SettingsState {
   final String sourceLanguage;
@@ -11,6 +12,8 @@ class SettingsState {
   final double fontSize;
   final TranslationEngine selectedEngine;
   final String deepLApiKey;
+  final SubtitleTheme subtitleTheme;
+  final SubtitlePlacement subtitlePlacement;
 
   const SettingsState({
     this.sourceLanguage = AppLanguages.defaultSource,
@@ -21,6 +24,8 @@ class SettingsState {
     this.fontSize = 14.0,
     this.selectedEngine = TranslationEngine.google,
     this.deepLApiKey = '',
+    this.subtitleTheme = SubtitleTheme.cyberpunk,
+    this.subtitlePlacement = SubtitlePlacement.inPlace,
   });
 
   SettingsState copyWith({
@@ -32,6 +37,8 @@ class SettingsState {
     double? fontSize,
     TranslationEngine? selectedEngine,
     String? deepLApiKey,
+    SubtitleTheme? subtitleTheme,
+    SubtitlePlacement? subtitlePlacement,
   }) {
     return SettingsState(
       sourceLanguage: sourceLanguage ?? this.sourceLanguage,
@@ -42,6 +49,8 @@ class SettingsState {
       fontSize: fontSize ?? this.fontSize,
       selectedEngine: selectedEngine ?? this.selectedEngine,
       deepLApiKey: deepLApiKey ?? this.deepLApiKey,
+      subtitleTheme: subtitleTheme ?? this.subtitleTheme,
+      subtitlePlacement: subtitlePlacement ?? this.subtitlePlacement,
     );
   }
 }
@@ -86,6 +95,14 @@ class SettingsNotifier extends Notifier<SettingsState> {
 
   void setDeepLApiKey(String key) {
     state = state.copyWith(deepLApiKey: key.trim());
+  }
+
+  void setSubtitleTheme(SubtitleTheme theme) {
+    state = state.copyWith(subtitleTheme: theme);
+  }
+
+  void setSubtitlePlacement(SubtitlePlacement placement) {
+    state = state.copyWith(subtitlePlacement: placement);
   }
 }
 
