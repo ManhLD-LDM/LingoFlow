@@ -52,4 +52,26 @@ class NativeOverlayService {
       return null;
     }
   }
+
+  /// Call Native OCR
+  static Future<Map<String, dynamic>?> recognizeText({
+    int x = 0,
+    int y = 0,
+    int width = 0,
+    int height = 0,
+    String? language,
+  }) async {
+    try {
+      final result = await _channel.invokeMapMethod<String, dynamic>('recognizeText', {
+        'x': x,
+        'y': y,
+        'width': width,
+        'height': height,
+        'language': language ?? 'auto',
+      });
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
 }

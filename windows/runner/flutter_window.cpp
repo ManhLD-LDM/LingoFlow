@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <vector>
+#include <string>
 #include <windows.h>
 
 #include "flutter/generated_plugin_registrant.h"
@@ -137,6 +138,16 @@ void FlutterWindow::SetupNativeMethodChannel() {
           response[flutter::EncodableValue("width")] = flutter::EncodableValue(width);
           response[flutter::EncodableValue("height")] = flutter::EncodableValue(height);
           response[flutter::EncodableValue("bytes")] = flutter::EncodableValue(pixels);
+          result->Success(flutter::EncodableValue(response));
+        } else if (method == "recognizeText") {
+          // Native OCR bridge response structure
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          flutter::EncodableList blocksList;
+          std::string fullText = "";
+
+          flutter::EncodableMap response;
+          response[flutter::EncodableValue("fullText")] = flutter::EncodableValue(fullText);
+          response[flutter::EncodableValue("blocks")] = flutter::EncodableValue(blocksList);
           result->Success(flutter::EncodableValue(response));
         } else {
           result->NotImplemented();
