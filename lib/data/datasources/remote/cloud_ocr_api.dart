@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui';
 import 'package:dio/dio.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../domain/entities/ocr_result.dart';
@@ -7,7 +8,7 @@ import '../../../domain/entities/ocr_result.dart';
 class CloudOcrApi {
   final Dio _dio;
 
-  CloudOcrApi({Dio? dio}) : _dio = dio ?? DioClient().dio;
+  CloudOcrApi({Dio? dio}) : _dio = dio ?? DioClient.instance;
 
   static String _mapLanguageCode(String? lang) {
     final code = lang?.toLowerCase() ?? 'ja';

@@ -21,7 +21,7 @@ class FloatingLens extends ConsumerStatefulWidget {
 class _FloatingLensState extends ConsumerState<FloatingLens> {
   // Lens position and dimensions on the global desktop screen
   Offset _position = const Offset(200, 200);
-  Size _size = const Size(500, 280);
+  Size _size = const Size(520, 300);
 
   bool _isLiveScanning = false;
   bool _isProcessing = false;
@@ -29,7 +29,7 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
 
   String _detectedOriginal = '';
   String _translatedResult = '';
-  String? _errorMessage;
+  String? _statusInfo;
 
   @override
   void initState() {
@@ -59,20 +59,20 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
       final interval = ref.read(settingsProvider).scanIntervalMs;
       _liveTimer?.cancel();
       _liveTimer = Timer.periodic(Duration(milliseconds: interval), (_) {
-        _captureAndTranslate();
+        _captureAndTranslate(isFromLive: true);
       });
-      _captureAndTranslate();
+      _captureAndTranslate(isFromLive: true);
     } else {
       _liveTimer?.cancel();
       _liveTimer = null;
     }
   }
 
-  Future<void> _captureAndTranslate() async {
+  Future<void> _captureAndTranslate({bool isFromLive = false}) async {
     if (_isProcessing) return;
     setState(() {
       _isProcessing = true;
-      _errorMessage = null;
+      if (!isFromLive) _statusInfo = 'Đang nhận diện & dịch...';
     });
 
     try {
@@ -91,6 +91,9 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
         if (mounted) {
           setState(() {
             _isProcessing = false;
+            if (!isFromLive && _translatedResult.isEmpty) {
+              _statusInfo = 'Không phát hiện thấy văn bản trong vùng này.';
+            }
           });
         }
         return;
@@ -126,13 +129,14 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
         setState(() {
           _detectedOriginal = cleanedText;
           _translatedResult = translated;
+          _statusInfo = null;
           _isProcessing = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString();
+          _statusInfo = 'Lỗi: $e';
           _isProcessing = false;
         });
       }
@@ -201,7 +205,7 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                       });
                     },
                     child: Container(
-                      height: 36,
+                      height: 38,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0F172A).withValues(alpha: 0.95),
@@ -226,6 +230,11 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                               letterSpacing: 0.5,
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${settings.sourceLanguage.toUpperCase()} → ${settings.targetLanguage.toUpperCase()}',
+                            style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.w600),
+                          ),
                           const Spacer(),
 
                           // Single Translate Button
@@ -239,8 +248,8 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                                 : const Icon(Icons.translate, color: Colors.cyanAccent, size: 18),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            tooltip: 'Dịch vùng này (Alt+S)',
-                            onPressed: _isProcessing ? null : _captureAndTranslate,
+                            tooltip: 'Dịch vùng này ngay (Alt+S)',
+                            onPressed: _isProcessing ? null : () => _captureAndTranslate(isFromLive: false),
                           ),
                           const SizedBox(width: 10),
 
@@ -403,20 +412,21 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
             ),
           ),
 
-        if (_errorMessage != null)
+        if (_statusInfo != null && _translatedResult.isEmpty)
           Positioned(
             left: _position.dx,
             top: _position.dy + _size.height + 6,
             width: _size.width,
             child: Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.redAccent.withValues(alpha: 0.9),
+                color: const Color(0xFF1E293B).withValues(alpha: 0.95),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.5)),
               ),
               child: Text(
-                'Lỗi: $_errorMessage',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
+                _statusInfo!,
+                style: const TextStyle(color: Colors.cyanAccent, fontSize: 12),
               ),
             ),
           ),
