@@ -6,8 +6,8 @@ import '../../core/services/hotkey_service.dart';
 import '../providers/settings_provider.dart';
 import '../providers/overlay_provider.dart';
 import '../providers/history_provider.dart';
+import '../widgets/floating_lens.dart';
 import 'settings_screen.dart';
-import 'overlay_screen.dart';
 import 'history_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -22,6 +22,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       TextEditingController(text: 'こんにちは世界 (Xin chào thế giới)');
   String _testTranslationResult = '';
   bool _isTranslating = false;
+  bool _isLensModeActive = false;
 
   @override
   void initState() {
@@ -41,12 +42,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         await ref.read(overlayProvider.notifier).performScanCycle();
       },
       onToggleScan: () {
-        final isScanning = ref.read(overlayProvider).isScanning;
-        if (isScanning) {
-          ref.read(overlayProvider.notifier).stopScanning();
-        } else {
-          ref.read(overlayProvider.notifier).startScanning();
-        }
+        setState(() {
+          _isLensModeActive = !_isLensModeActive;
+        });
       },
     );
   }
@@ -66,6 +64,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       text: text,
       sourceLanguage: settings.sourceLanguage,
       targetLanguage: settings.targetLanguage,
+      engine: settings.selectedEngine,
+      apiKey: settings.deepLApiKey,
     );
 
     // Save to History
@@ -92,8 +92,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
-    final overlay = ref.watch(overlayProvider);
 
+    // If Lens Mode is active, show the interactive Snipping Lens on screen
+    if (_isLensModeActive) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            FloatingLens(
+              onClose: () {
+                setState(() {
+                  _isLensModeActive = false;
+                });
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Default: Solid, Crisp, Dark Control Center
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
@@ -102,41 +120,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.cyanAccent.withValues(alpha: 0.2),
+                color: Colors.cyanAccent.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.translate, color: Colors.cyanAccent, size: 20),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             const Text(
               'LingoFlow',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color: Colors.white,
                 letterSpacing: 0.5,
+                color: Colors.white,
               ),
             ),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.blueAccent.withValues(alpha: 0.3),
+                color: Colors.cyanAccent.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: const Text(
-                'v1.0-alpha',
-                style: TextStyle(fontSize: 10, color: Colors.blueAccent),
+                'v1.0-live',
+                style: TextStyle(
+                  color: Colors.cyanAccent,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.history, color: Colors.cyanAccent),
-            tooltip: 'Lịch sử & Sổ từ vựng',
+            icon: const Icon(Icons.history_edu_outlined, color: Colors.cyanAccent),
+            tooltip: 'Lịch sử & Sổ từ vựng ⭐',
             onPressed: () {
               Navigator.push(
                 context,
@@ -146,7 +168,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.white70),
-            tooltip: 'Cài đặt',
+            tooltip: 'Cài đặt & DeepL',
             onPressed: () {
               Navigator.push(
                 context,
@@ -157,363 +179,328 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
+      body: ListView(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status & Quick Toggle Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E293B), Color(0xFF334155)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        children: [
+          // 1. Primary Action: Launch Floating Lens Box
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.4), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.cyanAccent.withValues(alpha: 0.1),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Trạng thái Quét Live',
-                            style: TextStyle(color: Colors.white70, fontSize: 13),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: overlay.isScanning ? Colors.greenAccent : Colors.grey,
-                                  boxShadow: overlay.isScanning
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.greenAccent.withValues(alpha: 0.6),
-                                            blurRadius: 8,
-                                            spreadRadius: 2,
-                                          )
-                                        ]
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                overlay.isScanning ? 'Đang chạy (Live)' : 'Đang tạm dừng',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const OverlayScreen()),
-                              );
-                            },
-                            icon: const Icon(Icons.picture_in_picture_alt, color: Colors.cyanAccent, size: 18),
-                            label: const Text('MỞ OVERLAY', style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.cyanAccent),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              if (overlay.isScanning) {
-                                ref.read(overlayProvider.notifier).stopScanning();
-                              } else {
-                                ref.read(overlayProvider.notifier).startScanning();
-                              }
-                            },
-                            icon: Icon(
-                              overlay.isScanning ? Icons.pause : Icons.play_arrow,
-                              color: overlay.isScanning ? Colors.white : Colors.black,
-                            ),
-                            label: Text(
-                              overlay.isScanning ? 'DỪNG QUÉT' : 'BẮT ĐẦU',
-                              style: TextStyle(
-                                color: overlay.isScanning ? Colors.white : Colors.black,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  overlay.isScanning ? Colors.redAccent : Colors.cyanAccent,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const Divider(color: Colors.white12, height: 28),
-                  // Language Selection Row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Từ ngôn ngữ (Nguồn):', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0F172A),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.white24),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: settings.sourceLanguage,
-                                  isExpanded: true,
-                                  dropdownColor: const Color(0xFF1E293B),
-                                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                                  items: AppLanguages.supportedSources.entries.map((entry) {
-                                    return DropdownMenuItem(
-                                      value: entry.key,
-                                      child: Text(entry.value),
-                                    );
-                                  }).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      ref.read(settingsProvider.notifier).setSourceLanguage(val);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Icon(Icons.arrow_forward, color: Colors.cyanAccent),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Sang ngôn ngữ (Đích):', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0F172A),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.white24),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: settings.targetLanguage,
-                                  isExpanded: true,
-                                  dropdownColor: const Color(0xFF1E293B),
-                                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                                  items: AppLanguages.supportedTargets.entries.map((entry) {
-                                    return DropdownMenuItem(
-                                      value: entry.key,
-                                      child: Text(entry.value),
-                                    );
-                                  }).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      ref.read(settingsProvider.notifier).setTargetLanguage(val);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+              ],
             ),
-            const SizedBox(height: 24),
-            // Hotkeys Quick Reference
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.keyboard_outlined, color: Colors.cyanAccent, size: 18),
-                      SizedBox(width: 8),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.cyanAccent.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.crop_free, color: Colors.cyanAccent, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
                       Text(
-                        'Phím tắt toàn hệ thống (Global Hotkeys)',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        'Khung Dịch Nổi (Floating Lens Box)',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Di chuyển khung đè lên game/truyện để dịch tức thì vùng đó.',
+                        style: TextStyle(color: Colors.white60, fontSize: 12),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildHotkeyBadge('Alt + X', 'Bật/Tắt Xuyên Thấu'),
-                      _buildHotkeyBadge('Alt + Q', 'Bật/Tắt Quét Live'),
-                      _buildHotkeyBadge('Alt + S', 'Chụp & Dịch 1 lần'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Quick Translation Test Console
-            const Text(
-              'Kiểm tra Dịch thuật (Live Translation Test)',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _testController,
-                    maxLines: 2,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Nhập text tiếng Nhật/Trung/Anh để test dịch...',
-                      hintStyle: const TextStyle(color: Colors.white38),
-                      filled: true,
-                      fillColor: const Color(0xFF0F172A),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.all(12),
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.cyanAccent,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    elevation: 4,
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: const Text(
+                    'BẬT KHUNG DỊCH',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isLensModeActive = true;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 2. Language Selector Bar
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Engine: Google Translate (Free On-Device/Cloud)',
-                        style: TextStyle(color: Colors.white38, fontSize: 11),
+                        'Từ ngôn ngữ (Nguồn):',
+                        style: TextStyle(color: Colors.white60, fontSize: 12),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: _isTranslating ? null : _performTestTranslation,
-                        icon: _isTranslating
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                              )
-                            : const Icon(Icons.play_circle_outline, size: 16, color: Colors.black),
-                        label: Text(
-                          _isTranslating ? 'Đang dịch...' : 'Dịch thử',
-                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.cyanAccent,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            dropdownColor: const Color(0xFF1E293B),
+                            value: settings.sourceLanguage,
+                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            items: AppLanguages.supportedSources.entries.map((e) {
+                              return DropdownMenuItem(
+                                value: e.key,
+                                child: Text('${e.value} (${e.key.toUpperCase()})'),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                ref.read(settingsProvider.notifier).setSourceLanguage(val);
+                              }
+                            },
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  if (_testTranslationResult.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.cyanAccent.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.3)),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Icon(Icons.arrow_forward, color: Colors.cyanAccent),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Sang ngôn ngữ (Đích):',
+                        style: TextStyle(color: Colors.white60, fontSize: 12),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Kết quả:',
-                            style: TextStyle(color: Colors.cyanAccent, fontSize: 11, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _testTranslationResult,
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            dropdownColor: const Color(0xFF1E293B),
+                            value: settings.targetLanguage,
                             style: const TextStyle(color: Colors.white, fontSize: 14),
+                            items: AppLanguages.supportedTargets.entries.map((e) {
+                              return DropdownMenuItem(
+                                value: e.key,
+                                child: Text(e.value),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                ref.read(settingsProvider.notifier).setTargetLanguage(val);
+                              }
+                            },
                           ),
-                        ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 3. Quick Hotkeys Cheat-sheet
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.keyboard_outlined, color: Colors.cyanAccent, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Phím tắt toàn hệ thống (Global Hotkeys)',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildHotkeyBadge('Alt + Q', 'Bật/Tắt Khung Dịch'),
+                    _buildHotkeyBadge('Alt + S', 'Dịch ngay vùng chọn'),
+                    _buildHotkeyBadge('Alt + X', 'Xuyên thấu / Tương tác'),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 20),
+
+          // 4. Live Translation Tester Box
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Kiểm tra Dịch thuật (Live Translation Test)',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _testController,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    hintText: 'Nhập câu tiếng Nhật/Trung/Anh bất kỳ để test thử...',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: const Color(0xFF0F172A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Engine: ${settings.selectedEngine.displayName}',
+                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.cyanAccent,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: _isTranslating ? null : _performTestTranslation,
+                      icon: _isTranslating
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                            )
+                          : const Icon(Icons.translate, size: 16),
+                      label: const Text('Dịch thử', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                if (_testTranslationResult.isNotEmpty) ...[
+                  const Divider(color: Colors.white10, height: 20),
+                  const Text('Kết quả dịch:', style: TextStyle(color: Colors.cyanAccent, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _testTranslationResult,
+                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildHotkeyBadge(String keyCombo, String description) {
+  Widget _buildHotkeyBadge(String hotkey, String label) {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: const Color(0xFF0F172A),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.4)),
           ),
           child: Text(
-            keyCombo,
-            style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 12),
+            hotkey,
+            style: const TextStyle(
+              color: Colors.cyanAccent,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
-          description,
+          label,
           style: const TextStyle(color: Colors.white60, fontSize: 11),
         ),
       ],
