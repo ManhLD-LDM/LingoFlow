@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/languages.dart';
+import '../../domain/entities/translation_engine.dart';
 
 class SettingsState {
   final String sourceLanguage;
@@ -8,6 +9,8 @@ class SettingsState {
   final int scanIntervalMs;
   final double overlayOpacity;
   final double fontSize;
+  final TranslationEngine selectedEngine;
+  final String deepLApiKey;
 
   const SettingsState({
     this.sourceLanguage = AppLanguages.defaultSource,
@@ -16,6 +19,8 @@ class SettingsState {
     this.scanIntervalMs = 1500,
     this.overlayOpacity = 0.85,
     this.fontSize = 14.0,
+    this.selectedEngine = TranslationEngine.google,
+    this.deepLApiKey = '',
   });
 
   SettingsState copyWith({
@@ -25,6 +30,8 @@ class SettingsState {
     int? scanIntervalMs,
     double? overlayOpacity,
     double? fontSize,
+    TranslationEngine? selectedEngine,
+    String? deepLApiKey,
   }) {
     return SettingsState(
       sourceLanguage: sourceLanguage ?? this.sourceLanguage,
@@ -33,6 +40,8 @@ class SettingsState {
       scanIntervalMs: scanIntervalMs ?? this.scanIntervalMs,
       overlayOpacity: overlayOpacity ?? this.overlayOpacity,
       fontSize: fontSize ?? this.fontSize,
+      selectedEngine: selectedEngine ?? this.selectedEngine,
+      deepLApiKey: deepLApiKey ?? this.deepLApiKey,
     );
   }
 }
@@ -69,6 +78,14 @@ class SettingsNotifier extends Notifier<SettingsState> {
 
   void setFontSize(double size) {
     state = state.copyWith(fontSize: size);
+  }
+
+  void setSelectedEngine(TranslationEngine engine) {
+    state = state.copyWith(selectedEngine: engine);
+  }
+
+  void setDeepLApiKey(String key) {
+    state = state.copyWith(deepLApiKey: key.trim());
   }
 }
 

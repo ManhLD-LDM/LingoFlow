@@ -1,12 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/settings_provider.dart';
+import '../../domain/entities/translation_engine.dart';
+import '../../data/datasources/remote/deep_l_api.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  late TextEditingController _apiKeyController;
+  bool _isValidatingKey = false;
+  String? _keyValidationMessage;
+  bool? _isKeyValid;
+
+  @override
+  void initState() {
+    super.initState();
+    _apiKeyController = TextEditingController(text: ref.read(settingsProvider).deepLApiKey);
+  }
+
+  @override
+  void dispose() {
+    _apiKeyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _validateDeepLKey() async {
+    final key = _apiKeyController.text.trim();
+    if (key.isEmpty) {
+      setState(() {
+        _isKeyValid = false;
+        _keyValidationMessage = 'Vui lòng nhập DeepL API Key trước khi kiểm tra.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isValidatingKey = true;
+      _keyValidationMessage = null;
+    });
+
+    final deepLApi = DeepLApi();
+    final isValid = await deepLApi.validateKey(key);
+
+    ref.read(settingsProvider.notifier).setDeepLApiKey(key);
+
+    setState(() {
+      _isValidatingKey = false;
+      _isKeyValid = isValid;
+      _keyValidationMessage = isValid
+          ? '✅ DeepL API Key hợp lệ và sẵn sàng sử dụng!'
+          : '❌ DeepL API Key không hợp lệ hoặc đã hết hạn mức.';
+    });
+  }
+
+  Widget _buildEngineOption({
+    required String title,
+    required String subtitle,
+    required TranslationEngine engine,
+    required TranslationEngine current,
+    required VoidCallback onTap,
+  }) {
+    final isSelected = engine == current;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.cyanAccent.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.cyanAccent : Colors.white10,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: isSelected ? Colors.cyanAccent : Colors.white38,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.white70,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
 
@@ -23,6 +131,102 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          // Section: Translation Engine Selection
+          const Text(
+            'BỘ MÁY DỊCH THUẬT (TRANSLATION ENGINE)',
+            style: TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                _buildEngineOption(
+                  title: 'Google Translate',
+                  subtitle: 'Miễn phí, tốc độ cao, không cần cấu hình API Key',
+                  engine: TranslationEngine.google,
+                  current: settings.selectedEngine,
+                  onTap: () => notifier.setSelectedEngine(TranslationEngine.google),
+                ),
+                const SizedBox(height: 10),
+                _buildEngineOption(
+                  title: 'DeepL API',
+                  subtitle: 'Chất lượng cao nhất cho Manga, Game & Visual Novel (Cần API Key)',
+                  engine: TranslationEngine.deepl,
+                  current: settings.selectedEngine,
+                  onTap: () => notifier.setSelectedEngine(TranslationEngine.deepl),
+                ),
+                if (settings.selectedEngine == TranslationEngine.deepl) ...[
+                  const Divider(color: Colors.white10, height: 24),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'DeepL Authentication Key (Free hoặc Pro):',
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _apiKeyController,
+                              obscureText: true,
+                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                              decoration: InputDecoration(
+                                hintText: 'Nhập khóa bí mật DeepL API Key...',
+                                hintStyle: const TextStyle(color: Colors.white38),
+                                filled: true,
+                                fillColor: const Color(0xFF0F172A),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide.none,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              ),
+                              onChanged: (val) => notifier.setDeepLApiKey(val),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.cyanAccent,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: _isValidatingKey ? null : _validateDeepLKey,
+                            child: _isValidatingKey
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                                  )
+                                : const Text('Kiểm tra', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                      if (_keyValidationMessage != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _keyValidationMessage!,
+                          style: TextStyle(
+                            color: _isKeyValid == true ? Colors.greenAccent : Colors.redAccent,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
           // Section: Overlay Behavior
           const Text(
             'HÀNH VI OVERLAY (CHẾ ĐỘ XUYÊN THẤU)',
@@ -64,6 +268,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
+
           // Section: Performance & Scan Frequency
           const Text(
             'TẦN SUẤT QUÉT & HIỆU NĂNG',
@@ -103,6 +308,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
+
           // Section: Appearance
           const Text(
             'GIAO DIỆN HIỂN THỊ OVERLAY',

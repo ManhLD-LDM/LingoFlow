@@ -122,6 +122,8 @@ class OverlayNotifier extends Notifier<OverlayState> {
             text: block.text,
             sourceLanguage: settings.sourceLanguage,
             targetLanguage: settings.targetLanguage,
+            engine: settings.selectedEngine,
+            apiKey: settings.deepLApiKey,
           );
 
           newItems.add(
@@ -150,6 +152,8 @@ class OverlayNotifier extends Notifier<OverlayState> {
           text: rawText,
           sourceLanguage: settings.sourceLanguage,
           targetLanguage: settings.targetLanguage,
+          engine: settings.selectedEngine,
+          apiKey: settings.deepLApiKey,
         );
 
         newItems.add(
