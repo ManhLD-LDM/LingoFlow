@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/languages.dart';
+import '../../core/services/native_overlay_service.dart';
+import '../../core/services/hotkey_service.dart';
 import '../providers/settings_provider.dart';
 import '../providers/overlay_provider.dart';
 import 'settings_screen.dart';
+import 'overlay_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -13,9 +16,38 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final TextEditingController _testController = TextEditingController(text: 'こんにちは世界 (Xin chào thế giới)');
+  final TextEditingController _testController =
+      TextEditingController(text: 'こんにちは世界 (Xin chào thế giới)');
   String _testTranslationResult = '';
   bool _isTranslating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupHotkeys();
+  }
+
+  Future<void> _setupHotkeys() async {
+    await HotkeyService.initialize(
+      onToggleClickThrough: () {
+        final current = ref.read(settingsProvider).isClickThrough;
+        final next = !current;
+        ref.read(settingsProvider.notifier).setClickThrough(next);
+        NativeOverlayService.setClickThrough(next);
+      },
+      onSingleCapture: () async {
+        // Trigger single capture
+      },
+      onToggleScan: () {
+        final isScanning = ref.read(overlayProvider).isScanning;
+        if (isScanning) {
+          ref.read(overlayProvider.notifier).stopScanning();
+        } else {
+          ref.read(overlayProvider.notifier).startScanning();
+        }
+      },
+    );
+  }
 
   Future<void> _performTestTranslation() async {
     final text = _testController.text.trim();
@@ -43,6 +75,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void dispose() {
     _testController.dispose();
+    HotkeyService.dispose();
     super.dispose();
   }
 
@@ -136,7 +169,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Trạng thái Overlay',
+                            'Trạng thái Quét Live',
                             style: TextStyle(color: Colors.white70, fontSize: 13),
                           ),
                           const SizedBox(height: 4),
@@ -161,7 +194,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                overlay.isScanning ? 'Đang chạy (Live Scanning)' : 'Đang tạm dừng',
+                                overlay.isScanning ? 'Đang chạy (Live)' : 'Đang tạm dừng',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -172,33 +205,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ],
                       ),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          if (overlay.isScanning) {
-                            ref.read(overlayProvider.notifier).stopScanning();
-                          } else {
-                            ref.read(overlayProvider.notifier).startScanning();
-                          }
-                        },
-                        icon: Icon(
-                          overlay.isScanning ? Icons.pause : Icons.play_arrow,
-                          color: overlay.isScanning ? Colors.white : Colors.black,
-                        ),
-                        label: Text(
-                          overlay.isScanning ? 'DỪNG QUÉT' : 'BẮT ĐẦU QUÉT',
-                          style: TextStyle(
-                            color: overlay.isScanning ? Colors.white : Colors.black,
-                            fontWeight: FontWeight.bold,
+                      Row(
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const OverlayScreen()),
+                              );
+                            },
+                            icon: const Icon(Icons.picture_in_picture_alt, color: Colors.cyanAccent, size: 18),
+                            label: const Text('MỞ OVERLAY', style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.cyanAccent),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
                           ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              overlay.isScanning ? Colors.redAccent : Colors.cyanAccent,
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          const SizedBox(width: 10),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              if (overlay.isScanning) {
+                                ref.read(overlayProvider.notifier).stopScanning();
+                              } else {
+                                ref.read(overlayProvider.notifier).startScanning();
+                              }
+                            },
+                            icon: Icon(
+                              overlay.isScanning ? Icons.pause : Icons.play_arrow,
+                              color: overlay.isScanning ? Colors.white : Colors.black,
+                            ),
+                            label: Text(
+                              overlay.isScanning ? 'DỪNG QUÉT' : 'BẮT ĐẦU',
+                              style: TextStyle(
+                                color: overlay.isScanning ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  overlay.isScanning ? Colors.redAccent : Colors.cyanAccent,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
@@ -282,6 +335,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ],
                         ),
                       ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Hotkeys Quick Reference
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.keyboard_outlined, color: Colors.cyanAccent, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Phím tắt toàn hệ thống (Global Hotkeys)',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildHotkeyBadge('Alt + X', 'Bật/Tắt Xuyên Thấu'),
+                      _buildHotkeyBadge('Alt + Q', 'Bật/Tắt Quét Live'),
+                      _buildHotkeyBadge('Alt + S', 'Chụp & Dịch 1 lần'),
                     ],
                   ),
                 ],
@@ -385,6 +472,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHotkeyBadge(String keyCombo, String description) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.4)),
+          ),
+          child: Text(
+            keyCombo,
+            style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          description,
+          style: const TextStyle(color: Colors.white60, fontSize: 11),
+        ),
+      ],
     );
   }
 }
