@@ -4,6 +4,7 @@ import '../providers/settings_provider.dart';
 import '../providers/overlay_provider.dart';
 import '../../core/services/native_overlay_service.dart';
 import '../widgets/region_selector.dart';
+import '../widgets/dictionary_popup.dart';
 
 class OverlayScreen extends ConsumerStatefulWidget {
   const OverlayScreen({super.key});
@@ -77,20 +78,31 @@ class _OverlayScreenState extends ConsumerState<OverlayScreen> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: settings.isClickThrough
-                            ? Colors.blueAccent.withValues(alpha: 0.3)
-                            : Colors.orangeAccent.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        settings.isClickThrough ? 'Xuyên thấu (Alt+X)' : 'Tương tác (Alt+X)',
-                        style: TextStyle(
-                          color: settings.isClickThrough ? Colors.cyanAccent : Colors.orangeAccent,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                    GestureDetector(
+                      onTap: () {
+                        final next = !settings.isClickThrough;
+                        ref.read(settingsProvider.notifier).setClickThrough(next);
+                        NativeOverlayService.setClickThrough(next);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: settings.isClickThrough
+                              ? Colors.blueAccent.withValues(alpha: 0.3)
+                              : Colors.orangeAccent.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: settings.isClickThrough ? Colors.cyanAccent : Colors.orangeAccent,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          settings.isClickThrough ? 'Xuyên thấu ON (Alt+X)' : 'Tương tác ON (Alt+X)',
+                          style: TextStyle(
+                            color: settings.isClickThrough ? Colors.cyanAccent : Colors.orangeAccent,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -139,33 +151,57 @@ class _OverlayScreenState extends ConsumerState<OverlayScreen> {
                 left: item.boundingBox.left,
                 top: item.boundingBox.top,
                 width: item.boundingBox.width.clamp(120.0, 600.0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A).withValues(alpha: settings.overlayOpacity),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.5), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        blurRadius: 8,
+                child: GestureDetector(
+                  onTap: () {
+                    if (!settings.isClickThrough) {
+                      DictionaryPopup.show(
+                        context,
+                        word: item.originalText,
+                        sourceLang: item.sourceLanguage,
+                        targetLang: item.targetLanguage,
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A).withValues(alpha: settings.overlayOpacity),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: settings.isClickThrough
+                            ? Colors.cyanAccent.withValues(alpha: 0.5)
+                            : Colors.orangeAccent.withValues(alpha: 0.8),
+                        width: 1.5,
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        item.translatedText,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: settings.fontSize,
-                          fontWeight: FontWeight.w600,
-                          height: 1.3,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          blurRadius: 8,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          item.translatedText,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: settings.fontSize,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                          ),
+                        ),
+                        if (!settings.isClickThrough) ...[
+                          const SizedBox(height: 4),
+                          const Text(
+                            '💡 Chạm để tra từ điển',
+                            style: TextStyle(color: Colors.orangeAccent, fontSize: 9),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               );

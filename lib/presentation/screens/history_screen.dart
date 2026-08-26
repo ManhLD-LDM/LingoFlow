@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/history_provider.dart';
 import '../../domain/entities/history_item.dart';
+import '../../core/services/export_service.dart';
 
 class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
@@ -47,6 +48,49 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 
+  void _showExportDialog(BuildContext context, List<HistoryItem> items) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'XUẤT DỮ LIỆU TỪ VỰNG / LỊCH SỬ',
+              style: TextStyle(color: Colors.cyanAccent, fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ...ExportFormat.values.map(
+              (fmt) => ListTile(
+                leading: const Icon(Icons.file_download_outlined, color: Colors.cyanAccent),
+                title: Text(fmt.label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                trailing: const Icon(Icons.copy, color: Colors.white60, size: 18),
+                onTap: () {
+                  final content = ExportService.exportItems(items, fmt);
+                  Clipboard.setData(ClipboardData(text: content));
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã sao chép ${items.length} từ theo định dạng ${fmt.label} vào Clipboard!'),
+                      duration: const Duration(seconds: 3),
+                      backgroundColor: const Color(0xFF0F172A),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyState = ref.watch(historyProvider);
@@ -66,12 +110,18 @@ class HistoryScreen extends ConsumerWidget {
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
-            if (historyState.items.isNotEmpty)
+            if (historyState.items.isNotEmpty) ...[
+              IconButton(
+                icon: const Icon(Icons.download, color: Colors.cyanAccent),
+                tooltip: 'Xuất dữ liệu (Anki / CSV / TXT)',
+                onPressed: () => _showExportDialog(context, items),
+              ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                 tooltip: 'Xoá tất cả',
                 onPressed: () => _showClearConfirmDialog(context, ref),
               ),
+            ],
             const SizedBox(width: 8),
           ],
           bottom: TabBar(

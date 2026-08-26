@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/utils/text_processor.dart';
 import '../../domain/entities/translation_item.dart';
 import '../../domain/repositories/translation_repository.dart';
 import '../../domain/repositories/ocr_repository.dart';
@@ -104,30 +105,36 @@ class OverlayNotifier extends Notifier<OverlayState> {
         return;
       }
 
-      // 2. Debounce optimization: skip translation if text is unchanged
+      // 2. Debounce optimization: skip translation if raw text is unchanged
       if (rawText == _previousTextHash) {
         _isProcessingCycle = false;
         return;
       }
       _previousTextHash = rawText;
 
-      // 3. Translate recognized blocks
+      // 3. Process & Translate recognized blocks
       final newItems = <TranslationItem>[];
       if (ocrResult.blocks.isNotEmpty) {
         for (var i = 0; i < ocrResult.blocks.length; i++) {
           final block = ocrResult.blocks[i];
-          if (block.text.trim().isEmpty) continue;
+          final cleanedText = TextProcessor.cleanOcrText(
+            block.text,
+            language: settings.sourceLanguage,
+          );
+          if (cleanedText.isEmpty) continue;
 
           final translated = await translateRepo.translate(
-            text: block.text,
+            text: cleanedText,
             sourceLanguage: settings.sourceLanguage,
             targetLanguage: settings.targetLanguage,
+            engine: settings.selectedEngine,
+            apiKey: settings.deepLApiKey,
           );
 
           newItems.add(
             TranslationItem(
               id: 'trans_${DateTime.now().millisecondsSinceEpoch}_$i',
-              originalText: block.text,
+              originalText: cleanedText,
               translatedText: translated,
               boundingBox: block.boundingBox,
               sourceLanguage: settings.sourceLanguage,
@@ -138,7 +145,7 @@ class OverlayNotifier extends Notifier<OverlayState> {
 
           // Save to History
           ref.read(historyProvider.notifier).addRecord(
-            originalText: block.text,
+            originalText: cleanedText,
             translatedText: translated,
             sourceLanguage: settings.sourceLanguage,
             targetLanguage: settings.targetLanguage,
@@ -146,16 +153,23 @@ class OverlayNotifier extends Notifier<OverlayState> {
         }
       } else {
         // Fallback for single full text
+        final cleanedFullText = TextProcessor.cleanOcrText(
+          rawText,
+          language: settings.sourceLanguage,
+        );
+
         final translated = await translateRepo.translate(
-          text: rawText,
+          text: cleanedFullText,
           sourceLanguage: settings.sourceLanguage,
           targetLanguage: settings.targetLanguage,
+          engine: settings.selectedEngine,
+          apiKey: settings.deepLApiKey,
         );
 
         newItems.add(
           TranslationItem(
             id: 'trans_${DateTime.now().millisecondsSinceEpoch}',
-            originalText: rawText,
+            originalText: cleanedFullText,
             translatedText: translated,
             boundingBox: region,
             sourceLanguage: settings.sourceLanguage,
@@ -166,7 +180,7 @@ class OverlayNotifier extends Notifier<OverlayState> {
 
         // Save to History
         ref.read(historyProvider.notifier).addRecord(
-          originalText: rawText,
+          originalText: cleanedFullText,
           translatedText: translated,
           sourceLanguage: settings.sourceLanguage,
           targetLanguage: settings.targetLanguage,
