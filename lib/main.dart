@@ -6,11 +6,15 @@ import 'presentation/screens/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables from .env file
+  // Load environment variables from .env file (with fallback to .env.example)
   try {
     await dotenv.load(fileName: '.env');
   } catch (e) {
-    debugPrint('[LingoFlow] Warning: Could not load .env file: $e');
+    try {
+      await dotenv.load(fileName: '.env.example');
+    } catch (_) {
+      debugPrint('[LingoFlow] Info: No .env found, running with defaults: $e');
+    }
   }
 
   runApp(
