@@ -52,7 +52,7 @@ class _DictionaryPopupState extends ConsumerState<DictionaryPopup> {
   }
 
   void _playPronunciation(String word) {
-    final _ = TtsService.getAudioStreamUrl(word, language: widget.sourceLang);
+    TtsService.speak(word, language: widget.sourceLang);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -60,7 +60,7 @@ class _DictionaryPopupState extends ConsumerState<DictionaryPopup> {
             const Icon(Icons.volume_up, color: Colors.cyanAccent, size: 18),
             const SizedBox(width: 8),
             Expanded(
-              child: Text('Phát âm giọng đọc AI: "$word"'),
+              child: Text('Đang phát âm: "$word"'),
             ),
           ],
         ),
