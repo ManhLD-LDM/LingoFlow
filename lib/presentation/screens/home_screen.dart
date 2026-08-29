@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/languages.dart';
 import '../../core/services/native_overlay_service.dart';
@@ -82,6 +83,87 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
+  Future<void> _pasteFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text != null && data!.text!.trim().isNotEmpty) {
+      _testController.text = data.text!.trim();
+      await _performTestTranslation();
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Clipboard trống hoặc không chứa văn bản!'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Color(0xFF0F172A),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showHotkeyGuide() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.cyanAccent.withValues(alpha: 0.3)),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.keyboard, color: Colors.cyanAccent),
+            SizedBox(width: 10),
+            Text('Phím Tắt Hệ Thống', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildDialogHotkeyRow('Alt + Q', 'Bật / Tắt Khung Dịch Nổi (Floating Lens)'),
+            const Divider(color: Colors.white10),
+            _buildDialogHotkeyRow('Alt + S', 'Chụp & Dịch vùng chọn tức thì 1 lần'),
+            const Divider(color: Colors.white10),
+            _buildDialogHotkeyRow('Alt + X', 'Bật / Tắt chế độ Xuyên Thấu (Click-Through)'),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.cyanAccent,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đã hiểu', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDialogHotkeyRow(String shortcut, String description) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(description, style: const TextStyle(color: Colors.white70, fontSize: 13))),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.4)),
+            ),
+            child: Text(shortcut, style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _testController.dispose();
@@ -111,7 +193,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
 
-    // Default: Solid, Crisp, Dark Control Center
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
@@ -157,6 +238,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.help_outline, color: Colors.white70),
+            tooltip: 'Hướng dẫn phím tắt (F1)',
+            onPressed: _showHotkeyGuide,
+          ),
+          IconButton(
             icon: const Icon(Icons.history_edu_outlined, color: Colors.cyanAccent),
             tooltip: 'Lịch sử & Sổ từ vựng ⭐',
             onPressed: () {
@@ -168,7 +254,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.white70),
-            tooltip: 'Cài đặt & DeepL',
+            tooltip: 'Cài đặt',
             onPressed: () {
               Navigator.push(
                 context,
@@ -365,20 +451,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.keyboard_outlined, color: Colors.cyanAccent, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Phím tắt toàn hệ thống (Global Hotkeys)',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.keyboard_outlined, color: Colors.cyanAccent, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Phím tắt toàn hệ thống (Global Hotkeys)',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextButton(
+                      onPressed: _showHotkeyGuide,
+                      child: const Text('Chi tiết', style: TextStyle(color: Colors.cyanAccent, fontSize: 12)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
@@ -403,15 +498,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Kiểm tra Dịch thuật (Live Translation Test)',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Kiểm tra Dịch thuật (Live Translation Test)',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _pasteFromClipboard,
+                      icon: const Icon(Icons.paste, size: 14, color: Colors.cyanAccent),
+                      label: const Text('Dán Clipboard', style: TextStyle(color: Colors.cyanAccent, fontSize: 12)),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 TextField(
                   controller: _testController,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -494,14 +599,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             style: const TextStyle(
               color: Colors.cyanAccent,
               fontWeight: FontWeight.bold,
-              fontSize: 13,
+              fontSize: 12,
             ),
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(color: Colors.white60, fontSize: 11),
+          style: const TextStyle(color: Colors.white54, fontSize: 11),
         ),
       ],
     );
