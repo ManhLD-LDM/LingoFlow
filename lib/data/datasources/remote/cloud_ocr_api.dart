@@ -2,13 +2,29 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui';
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../../domain/entities/ocr_result.dart';
 
 class CloudOcrApi {
   final Dio _dio;
+  static const String _tag = 'CloudOcrApi';
 
   CloudOcrApi({Dio? dio}) : _dio = dio ?? DioClient.instance;
+
+  /// Resolves the OCR API key from: explicit parameter > .env > empty (will fail gracefully)
+  static String _resolveApiKey({String? explicitKey}) {
+    if (explicitKey != null && explicitKey.trim().isNotEmpty) {
+      return explicitKey.trim();
+    }
+    try {
+      if (dotenv.isInitialized) {
+        return dotenv.env['OCR_API_KEY'] ?? '';
+      }
+    } catch (_) {}
+    return '';
+  }
 
   static String _mapLanguageCode(String? lang) {
     final code = lang?.toLowerCase() ?? 'ja';
@@ -35,7 +51,14 @@ class CloudOcrApi {
   Future<OcrResult> recognizeImage(
     Uint8List bmpBytes, {
     String? language,
+    String? apiKey,
   }) async {
+    final resolvedKey = _resolveApiKey(explicitKey: apiKey);
+    if (resolvedKey.isEmpty) {
+      AppLogger.warning('OCR API key is missing. Skipping cloud OCR request.', tag: _tag);
+      return OcrResult.empty;
+    }
+
     try {
       final base64Image = 'data:image/bmp;base64,${base64Encode(bmpBytes)}';
       final ocrLang = _mapLanguageCode(language);
@@ -54,7 +77,7 @@ class CloudOcrApi {
         data: formData,
         options: Options(
           headers: {
-            'apikey': 'K87899148788957',
+            'apikey': resolvedKey,
           },
           sendTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10),
@@ -104,6 +127,7 @@ class CloudOcrApi {
             }
           }
 
+          AppLogger.debug('Cloud OCR success: ${parsedText.length} chars found', tag: _tag);
           return OcrResult(
             fullText: parsedText,
             blocks: blocks,
@@ -113,7 +137,8 @@ class CloudOcrApi {
         }
       }
       return OcrResult.empty;
-    } catch (_) {
+    } catch (e, stack) {
+      AppLogger.error('Cloud OCR recognition error', tag: _tag, error: e, stackTrace: stack);
       return OcrResult.empty;
     }
   }

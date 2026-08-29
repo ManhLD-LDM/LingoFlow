@@ -6,13 +6,34 @@ import '../datasources/remote/deep_l_api.dart';
 class TranslationRepositoryImpl implements TranslationRepository {
   final GoogleTranslateApi _googleTranslateApi;
   final DeepLApi _deepLApi;
+
+  /// LRU-style memory cache with a maximum size to prevent unbounded growth
+  static const int _maxCacheSize = 200;
   final Map<String, String> _memoryCache = {};
+  final List<String> _cacheOrder = [];
 
   TranslationRepositoryImpl({
     GoogleTranslateApi? googleTranslateApi,
     DeepLApi? deepLApi,
   })  : _googleTranslateApi = googleTranslateApi ?? GoogleTranslateApi(),
         _deepLApi = deepLApi ?? DeepLApi();
+
+  void _putCache(String key, String value) {
+    if (_memoryCache.containsKey(key)) {
+      // Move to end (most recently used)
+      _cacheOrder.remove(key);
+      _cacheOrder.add(key);
+      _memoryCache[key] = value;
+    } else {
+      // Evict oldest entry if at capacity
+      if (_cacheOrder.length >= _maxCacheSize) {
+        final evictKey = _cacheOrder.removeAt(0);
+        _memoryCache.remove(evictKey);
+      }
+      _cacheOrder.add(key);
+      _memoryCache[key] = value;
+    }
+  }
 
   @override
   Future<String> translate({
@@ -27,6 +48,9 @@ class TranslationRepositoryImpl implements TranslationRepository {
 
     final cacheKey = '${engine.id}_${sourceLanguage ?? "auto"}_${targetLanguage}_$cleanText';
     if (_memoryCache.containsKey(cacheKey)) {
+      // Move to end on access (LRU touch)
+      _cacheOrder.remove(cacheKey);
+      _cacheOrder.add(cacheKey);
       return _memoryCache[cacheKey]!;
     }
 
@@ -55,7 +79,7 @@ class TranslationRepositoryImpl implements TranslationRepository {
       );
     }
 
-    _memoryCache[cacheKey] = translated;
+    _putCache(cacheKey, translated);
     return translated;
   }
 }

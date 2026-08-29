@@ -97,6 +97,7 @@ class OverlayNotifier extends Notifier<OverlayState> {
       final ocrResult = await ocrRepo.recognizeFromRegion(
         region,
         languageHint: settings.sourceLanguage,
+        apiKey: settings.ocrApiKey,
       );
 
       final rawText = ocrResult.fullText.trim();

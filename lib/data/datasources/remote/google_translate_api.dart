@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/utils/app_logger.dart';
 
 class GoogleTranslateApi {
   final Dio _dio;
+  static const String _tag = 'GoogleTranslateApi';
 
   GoogleTranslateApi({Dio? dio}) : _dio = dio ?? DioClient.instance;
 
@@ -11,7 +13,8 @@ class GoogleTranslateApi {
     required String targetLang,
     String sourceLang = 'auto',
   }) async {
-    if (text.trim().isEmpty) return '';
+    final clean = text.trim();
+    if (clean.isEmpty) return '';
 
     try {
       final response = await _dio.get(
@@ -21,7 +24,7 @@ class GoogleTranslateApi {
           'sl': sourceLang,
           'tl': targetLang,
           'dt': 't',
-          'q': text,
+          'q': clean,
         },
       );
 
@@ -33,12 +36,14 @@ class GoogleTranslateApi {
             buffer.write(item[0]);
           }
         }
-        return buffer.toString();
+        final translated = buffer.toString();
+        AppLogger.debug('Google translated: "$clean" -> "$translated"', tag: _tag);
+        return translated;
       }
-      return text;
-    } catch (e) {
-      // Return original text on network error
-      return '[Error: $e] $text';
+      return clean;
+    } catch (e, stack) {
+      AppLogger.error('Google translation request failed', tag: _tag, error: e, stackTrace: stack);
+      return '[Error: $e] $clean';
     }
   }
 }

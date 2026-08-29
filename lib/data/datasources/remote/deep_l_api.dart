@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/utils/app_logger.dart';
 
 class DeepLApi {
   final Dio _dio;
+  static const String _tag = 'DeepLApi';
 
   DeepLApi({Dio? dio}) : _dio = dio ?? DioClient.instance;
 
@@ -46,11 +48,14 @@ class DeepLApi {
       if (response.statusCode == 200 && response.data != null) {
         final translations = response.data['translations'] as List<dynamic>?;
         if (translations != null && translations.isNotEmpty) {
-          return (translations[0]['text'] as String?) ?? text;
+          final translated = (translations[0]['text'] as String?) ?? text;
+          AppLogger.debug('DeepL translated: "$text" -> "$translated"', tag: _tag);
+          return translated;
         }
       }
       return text;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error('DeepL translation error', tag: _tag, error: e, stackTrace: stack);
       if (e is DioException) {
         final status = e.response?.statusCode;
         if (status == 403) {
@@ -78,8 +83,11 @@ class DeepLApi {
           headers: {'Authorization': 'DeepL-Auth-Key $apiKey'},
         ),
       );
-      return response.statusCode == 200;
-    } catch (_) {
+      final isValid = response.statusCode == 200;
+      AppLogger.info('DeepL key validation result: $isValid', tag: _tag);
+      return isValid;
+    } catch (e, stack) {
+      AppLogger.warning('DeepL key validation failed', tag: _tag, error: e, stackTrace: stack);
       return false;
     }
   }

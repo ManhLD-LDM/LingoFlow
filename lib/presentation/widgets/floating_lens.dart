@@ -19,9 +19,9 @@ class FloatingLens extends ConsumerStatefulWidget {
 }
 
 class _FloatingLensState extends ConsumerState<FloatingLens> {
-  // Initial compact Lens position and dimensions
-  Offset _position = const Offset(200, 150);
-  Size _size = const Size(440, 220);
+  // Lens position and dimensions (loaded from persisted settings)
+  late Offset _position;
+  late Size _size;
 
   bool _isLiveScanning = false;
   bool _isProcessing = false;
@@ -34,6 +34,10 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
   @override
   void initState() {
     super.initState();
+    // Load persisted lens position/size from settings
+    final settings = ref.read(settingsProvider);
+    _position = Offset(settings.lensX, settings.lensY);
+    _size = Size(settings.lensWidth, settings.lensHeight);
     // Enable full-screen borderless transparent overlay
     NativeOverlayService.enterOverlayMode();
   }
@@ -46,6 +50,9 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
 
   void _closeLens() {
     _liveTimer?.cancel();
+    // Persist lens position/size before closing
+    ref.read(settingsProvider.notifier).setLensPosition(_position.dx, _position.dy);
+    ref.read(settingsProvider.notifier).setLensSize(_size.width, _size.height);
     NativeOverlayService.exitOverlayMode();
     widget.onClose();
   }
@@ -84,6 +91,7 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
       final ocrResult = await ocrRepo.recognizeFromRegion(
         region,
         languageHint: settings.sourceLanguage,
+        apiKey: settings.ocrApiKey,
       );
 
       final rawText = ocrResult.fullText.trim();
@@ -196,6 +204,9 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                         _position += details.delta;
                       });
                     },
+                    onPanEnd: (_) {
+                      ref.read(settingsProvider.notifier).setLensPosition(_position.dx, _position.dy);
+                    },
                     child: Container(
                       height: 32,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -283,6 +294,9 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
                         final newH = (_size.height + details.delta.dy).clamp(100.0, 1000.0);
                         _size = Size(newW, newH);
                       });
+                    },
+                    onPanEnd: (_) {
+                      ref.read(settingsProvider.notifier).setLensSize(_size.width, _size.height);
                     },
                     child: Container(
                       width: 20,
