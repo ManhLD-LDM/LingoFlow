@@ -75,4 +75,23 @@ class TextProcessor {
 
     return result;
   }
+
+  /// Applies custom glossary term mappings to the translated text.
+  /// Longer phrases take matching precedence over single words.
+  static String applyGlossary(String text, Map<String, String> glossary) {
+    if (glossary.isEmpty || text.isEmpty) return text;
+    var result = text;
+
+    final sortedKeys = glossary.keys.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+
+    for (final term in sortedKeys) {
+      if (term.trim().isEmpty) continue;
+      final replacement = glossary[term];
+      if (replacement != null && replacement.isNotEmpty) {
+        result = result.replaceAll(RegExp(RegExp.escape(term), caseSensitive: false), replacement);
+      }
+    }
+    return result;
+  }
 }

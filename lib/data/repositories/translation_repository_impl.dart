@@ -2,6 +2,7 @@ import '../../domain/entities/translation_engine.dart';
 import '../../domain/repositories/translation_repository.dart';
 import '../datasources/remote/google_translate_api.dart';
 import '../datasources/remote/deep_l_api.dart';
+import '../../core/utils/text_processor.dart';
 
 class TranslationRepositoryImpl implements TranslationRepository {
   final GoogleTranslateApi _googleTranslateApi;
@@ -42,6 +43,7 @@ class TranslationRepositoryImpl implements TranslationRepository {
     String? sourceLanguage,
     TranslationEngine engine = TranslationEngine.google,
     String? apiKey,
+    Map<String, String>? glossary,
   }) async {
     final cleanText = text.trim();
     if (cleanText.isEmpty) return '';
@@ -51,7 +53,8 @@ class TranslationRepositoryImpl implements TranslationRepository {
       // Move to end on access (LRU touch)
       _cacheOrder.remove(cacheKey);
       _cacheOrder.add(cacheKey);
-      return _memoryCache[cacheKey]!;
+      final cached = _memoryCache[cacheKey]!;
+      return glossary != null ? TextProcessor.applyGlossary(cached, glossary) : cached;
     }
 
     String translated;
@@ -80,6 +83,6 @@ class TranslationRepositoryImpl implements TranslationRepository {
     }
 
     _putCache(cacheKey, translated);
-    return translated;
+    return glossary != null ? TextProcessor.applyGlossary(translated, glossary) : translated;
   }
 }
