@@ -37,5 +37,22 @@ void main() {
       expect(TextProcessor.cleanOcrText(''), equals(''));
       expect(TextProcessor.cleanOcrText('   \n\t  '), equals(''));
     });
+
+    test('applyGlossary replaces matched terms respecting longer match precedence', () {
+      final glossary = {
+        'HP': 'Máu (HP)',
+        'Max HP': 'Máu Tối Đa',
+        '宝具': 'Noble Phantasm (Bảo Khí)',
+      };
+      const text = 'Nhân vật có Max HP là 5000, HP hiện tại 2000. Dùng 宝具 ngay!';
+      final result = TextProcessor.applyGlossary(text, glossary);
+
+      expect(result, equals('Nhân vật có Máu Tối Đa là 5000, Máu (HP) hiện tại 2000. Dùng Noble Phantasm (Bảo Khí) ngay!'));
+    });
+
+    test('applyGlossary returns original text if glossary is empty', () {
+      const text = 'Hello world';
+      expect(TextProcessor.applyGlossary(text, {}), equals(text));
+    });
   });
 }

@@ -7,5 +7,6 @@ abstract class TranslationRepository {
     String? sourceLanguage,
     TranslationEngine engine = TranslationEngine.google,
     String? apiKey,
+    Map<String, String>? glossary,
   });
 }

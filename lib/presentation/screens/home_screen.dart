@@ -11,6 +11,7 @@ import '../widgets/floating_lens.dart';
 import '../widgets/onboarding_wizard.dart';
 import 'settings_screen.dart';
 import 'history_screen.dart';
+import 'profiles_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -255,6 +256,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const HistoryScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.sports_esports_outlined, color: Colors.cyanAccent),
+            tooltip: 'Hồ sơ Game & Từ điển thuật ngữ (Glossary)',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfilesScreen()),
               );
             },
           ),
