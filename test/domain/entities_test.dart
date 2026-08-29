@@ -3,6 +3,7 @@ import 'package:lingo_flow/domain/entities/history_item.dart';
 import 'package:lingo_flow/domain/entities/subtitle_style.dart';
 import 'package:lingo_flow/domain/entities/translation_engine.dart';
 import 'package:lingo_flow/domain/entities/ocr_result.dart';
+import 'package:lingo_flow/domain/entities/ocr_engine_mode.dart';
 
 void main() {
   group('Domain Entities Tests', () {
@@ -44,6 +45,14 @@ void main() {
       expect(TranslationEngine.fromId('deepl'), equals(TranslationEngine.deepl));
       // Fallback
       expect(TranslationEngine.fromId('unknown'), equals(TranslationEngine.google));
+    });
+
+    test('OcrEngineMode.fromId maps correctly with fallback', () {
+      expect(OcrEngineMode.fromId('auto_fallback'), equals(OcrEngineMode.autoFallback));
+      expect(OcrEngineMode.fromId('cloud_only'), equals(OcrEngineMode.cloudOnly));
+      expect(OcrEngineMode.fromId('offline_only'), equals(OcrEngineMode.offlineOnly));
+      // Fallback
+      expect(OcrEngineMode.fromId('invalid_mode'), equals(OcrEngineMode.autoFallback));
     });
 
     test('OcrResult empty constant is properly structured', () {
