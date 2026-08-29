@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../network/dio_client.dart';
+import '../utils/app_logger.dart';
 
 class WordDefinition {
   final String word;
@@ -17,6 +18,7 @@ class WordDefinition {
 
 class DictionaryService {
   final Dio _dio;
+  static const String _tag = 'DictionaryService';
 
   DictionaryService({Dio? dio}) : _dio = dio ?? DioClient.instance;
 
@@ -87,7 +89,9 @@ class DictionaryService {
           examples: examples,
         );
       }
-    } catch (_) {}
+    } catch (e, stack) {
+      AppLogger.warning('Dictionary lookup failed for "$cleanWord"', tag: _tag, error: e, stackTrace: stack);
+    }
 
     return WordDefinition(
       word: cleanWord,

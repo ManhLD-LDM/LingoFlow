@@ -1,10 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
+import '../utils/app_logger.dart';
 
 typedef HotkeyCallback = void Function();
 
 class HotkeyService {
+  static const String _tag = 'HotkeyService';
+
   static final HotKey toggleClickThroughHotKey = HotKey(
     key: PhysicalKeyboardKey.keyX,
     modifiers: [HotKeyModifier.alt],
@@ -34,20 +37,31 @@ class HotkeyService {
 
       await hotKeyManager.register(
         toggleClickThroughHotKey,
-        keyDownHandler: (hotKey) => onToggleClickThrough(),
+        keyDownHandler: (hotKey) {
+          AppLogger.debug('Hotkey triggered: Alt + X', tag: _tag);
+          onToggleClickThrough();
+        },
       );
 
       await hotKeyManager.register(
         singleCaptureHotKey,
-        keyDownHandler: (hotKey) => onSingleCapture(),
+        keyDownHandler: (hotKey) {
+          AppLogger.debug('Hotkey triggered: Alt + S', tag: _tag);
+          onSingleCapture();
+        },
       );
 
       await hotKeyManager.register(
         toggleScanHotKey,
-        keyDownHandler: (hotKey) => onToggleScan(),
+        keyDownHandler: (hotKey) {
+          AppLogger.debug('Hotkey triggered: Alt + Q', tag: _tag);
+          onToggleScan();
+        },
       );
-    } catch (_) {
-      // Hotkeys might be unavailable on some platforms or need special permissions
+
+      AppLogger.info('Global hotkeys registered successfully', tag: _tag);
+    } catch (e, stack) {
+      AppLogger.warning('Failed to register global hotkeys (may lack platform permissions)', tag: _tag, error: e, stackTrace: stack);
     }
   }
 
@@ -55,6 +69,9 @@ class HotkeyService {
     if (kIsWeb) return;
     try {
       await hotKeyManager.unregisterAll();
-    } catch (_) {}
+      AppLogger.info('Global hotkeys unregistered', tag: _tag);
+    } catch (e, stack) {
+      AppLogger.warning('Failed to unregister hotkeys', tag: _tag, error: e, stackTrace: stack);
+    }
   }
 }

@@ -13,7 +13,7 @@ class OcrRepositoryImpl implements OcrRepository {
       : _cloudOcrApi = cloudOcrApi ?? CloudOcrApi();
 
   @override
-  Future<OcrResult> recognizeFromRegion(Rect region, {String? languageHint}) async {
+  Future<OcrResult> recognizeFromRegion(Rect region, {String? languageHint, String? apiKey}) async {
     // 1. Capture screen pixels directly via Win32 GDI BitBlt
     final captureData = await NativeOverlayService.captureScreen(
       x: region.left.toInt(),
@@ -35,6 +35,7 @@ class OcrRepositoryImpl implements OcrRepository {
         final result = await _cloudOcrApi.recognizeImage(
           bmpBytes,
           language: languageHint,
+          apiKey: apiKey,
         );
 
         if (result.fullText.isNotEmpty) {
@@ -73,9 +74,10 @@ class OcrRepositoryImpl implements OcrRepository {
     int width,
     int height, {
     String? languageHint,
+    String? apiKey,
   }) async {
     final rawBytes = Uint8List.fromList(bytes);
     final bmpBytes = BmpEncoder.encodeBgra(rawBytes, width, height);
-    return _cloudOcrApi.recognizeImage(bmpBytes, language: languageHint);
+    return _cloudOcrApi.recognizeImage(bmpBytes, language: languageHint, apiKey: apiKey);
   }
 }

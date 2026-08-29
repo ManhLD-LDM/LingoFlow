@@ -13,25 +13,30 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  late TextEditingController _apiKeyController;
+  late TextEditingController _deepLKeyController;
+  late TextEditingController _ocrKeyController;
   bool _isValidatingKey = false;
   String? _keyValidationMessage;
   bool? _isKeyValid;
+  bool _isOcrKeySaved = false;
 
   @override
   void initState() {
     super.initState();
-    _apiKeyController = TextEditingController(text: ref.read(settingsProvider).deepLApiKey);
+    final settings = ref.read(settingsProvider);
+    _deepLKeyController = TextEditingController(text: settings.deepLApiKey);
+    _ocrKeyController = TextEditingController(text: settings.ocrApiKey);
   }
 
   @override
   void dispose() {
-    _apiKeyController.dispose();
+    _deepLKeyController.dispose();
+    _ocrKeyController.dispose();
     super.dispose();
   }
 
   Future<void> _validateDeepLKey() async {
-    final key = _apiKeyController.text.trim();
+    final key = _deepLKeyController.text.trim();
     if (key.isEmpty) {
       setState(() {
         _isKeyValid = false;
@@ -56,6 +61,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _keyValidationMessage = isValid
           ? '✅ DeepL API Key hợp lệ và sẵn sàng sử dụng!'
           : '❌ DeepL API Key không hợp lệ hoặc đã hết hạn mức.';
+    });
+  }
+
+  void _saveOcrKey() {
+    final key = _ocrKeyController.text.trim();
+    ref.read(settingsProvider.notifier).setOcrApiKey(key);
+    setState(() {
+      _isOcrKeySaved = true;
+    });
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _isOcrKeySaved = false;
+        });
+      }
     });
   }
 
@@ -175,7 +195,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         children: [
                           Expanded(
                             child: TextField(
-                              controller: _apiKeyController,
+                              controller: _deepLKeyController,
                               obscureText: true,
                               style: const TextStyle(color: Colors.white, fontSize: 13),
                               decoration: InputDecoration(
@@ -223,6 +243,86 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ],
                   ),
                 ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Section: OCR Engine Configuration
+          const Text(
+            'BỘ NHẬN DIỆN CHỮ VIẾT (OCR ENGINE)',
+            style: TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.visibility, color: Colors.cyanAccent, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'OCR.space Asian Cloud Engine 2',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Tối ưu hóa chuyên sâu cho nhận diện chữ tượng hình Nhật/Trung/Hàn và chữ Latinh.',
+                  style: TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                const Text('OCR API Key tùy chỉnh (Mặc định đọc từ file .env):', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _ocrKeyController,
+                        obscureText: true,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText: 'Nhập OCR.space API Key (hoặc để trống để dùng .env)...',
+                          hintStyle: const TextStyle(color: Colors.white38),
+                          filled: true,
+                          fillColor: const Color(0xFF0F172A),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isOcrKeySaved ? Colors.greenAccent : Colors.cyanAccent,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: _saveOcrKey,
+                      icon: Icon(_isOcrKeySaved ? Icons.check : Icons.save, size: 16),
+                      label: Text(
+                        _isOcrKeySaved ? 'Đã lưu' : 'Lưu',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  '💡 Bạn có thể đăng ký API key miễn phí (25,000 requests/tháng) tại ocr.space/ocrapi/freekey',
+                  style: TextStyle(color: Colors.white38, fontSize: 11),
+                ),
               ],
             ),
           ),
