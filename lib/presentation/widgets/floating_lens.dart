@@ -7,6 +7,7 @@ import '../../core/services/native_overlay_service.dart';
 import '../providers/settings_provider.dart';
 import '../providers/overlay_provider.dart';
 import '../providers/history_provider.dart';
+import '../providers/profile_provider.dart';
 import 'dictionary_popup.dart';
 
 class FloatingLens extends ConsumerStatefulWidget {
@@ -118,12 +119,14 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
         return;
       }
 
+      final activeProfile = ref.read(profileProvider).activeProfile;
       final translated = await translateRepo.translate(
         text: cleanedText,
         sourceLanguage: settings.sourceLanguage,
         targetLanguage: settings.targetLanguage,
         engine: settings.selectedEngine,
         apiKey: settings.deepLApiKey,
+        glossary: activeProfile.glossary,
       );
 
       // Save to History
