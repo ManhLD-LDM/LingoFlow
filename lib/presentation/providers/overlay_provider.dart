@@ -9,6 +9,7 @@ import '../../data/repositories/translation_repository_impl.dart';
 import '../../data/repositories/ocr_repository_impl.dart';
 import 'settings_provider.dart';
 import 'history_provider.dart';
+import 'profile_provider.dart';
 
 final translationRepositoryProvider = Provider<TranslationRepository>((ref) {
   return TranslationRepositoryImpl();
@@ -125,12 +126,14 @@ class OverlayNotifier extends Notifier<OverlayState> {
           );
           if (cleanedText.isEmpty) continue;
 
+          final activeProfile = ref.read(profileProvider).activeProfile;
           final translated = await translateRepo.translate(
             text: cleanedText,
             sourceLanguage: settings.sourceLanguage,
             targetLanguage: settings.targetLanguage,
             engine: settings.selectedEngine,
             apiKey: settings.deepLApiKey,
+            glossary: activeProfile.glossary,
           );
 
           newItems.add(
@@ -160,12 +163,14 @@ class OverlayNotifier extends Notifier<OverlayState> {
           language: settings.sourceLanguage,
         );
 
+        final activeProfile = ref.read(profileProvider).activeProfile;
         final translated = await translateRepo.translate(
           text: cleanedFullText,
           sourceLanguage: settings.sourceLanguage,
           targetLanguage: settings.targetLanguage,
           engine: settings.selectedEngine,
           apiKey: settings.deepLApiKey,
+          glossary: activeProfile.glossary,
         );
 
         newItems.add(
