@@ -590,6 +590,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with SingleTick
             ],
           ),
         ),
+        const SizedBox(height: 20),
+
+        const Text(
+          'XEM TRƯỚC PHỤ ĐỀ TRÊN MÀN HÌNH (LIVE PREVIEW)',
+          style: TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 140,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.3), width: 1.5),
+            gradient: const RadialGradient(
+              center: Alignment.center,
+              radius: 1.2,
+              colors: [Color(0xFF312E81), Color(0xFF0F172A)],
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: 10,
+                left: 12,
+                child: Row(
+                  children: [
+                    const Icon(Icons.videogame_asset, size: 14, color: Colors.cyanAccent),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Mô phỏng hiển thị trên Game / Manga (${settings.subtitleTheme.name}):',
+                      style: const TextStyle(color: Colors.white60, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Align(
+                alignment: settings.subtitlePlacement == SubtitlePlacement.inPlace
+                    ? const Alignment(0, 0.1)
+                    : const Alignment(0, 0.7),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: settings.subtitleTheme.backgroundColor.withValues(alpha: settings.overlayOpacity),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: settings.subtitleTheme.borderColor, width: 1.5),
+                  ),
+                  child: Text(
+                    '「俺は海賊王になる男だ！」 ➜ Tôi là người đàn ông sẽ trở thành Vua Hải Tặc!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: settings.subtitleTheme.textColor,
+                      fontSize: settings.fontSize,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

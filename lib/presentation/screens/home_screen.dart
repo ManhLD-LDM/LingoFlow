@@ -8,6 +8,7 @@ import '../providers/settings_provider.dart';
 import '../providers/overlay_provider.dart';
 import '../providers/history_provider.dart';
 import '../widgets/floating_lens.dart';
+import '../widgets/onboarding_wizard.dart';
 import 'settings_screen.dart';
 import 'history_screen.dart';
 
@@ -237,6 +238,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome, color: Colors.cyanAccent),
+            tooltip: 'Hướng dẫn thiết lập 3 bước',
+            onPressed: () => OnboardingWizardDialog.show(context),
+          ),
           IconButton(
             icon: const Icon(Icons.help_outline, color: Colors.white70),
             tooltip: 'Hướng dẫn phím tắt (F1)',
