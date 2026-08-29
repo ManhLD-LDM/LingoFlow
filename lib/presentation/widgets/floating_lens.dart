@@ -92,6 +92,7 @@ class _FloatingLensState extends ConsumerState<FloatingLens> {
         region,
         languageHint: settings.sourceLanguage,
         apiKey: settings.ocrApiKey,
+        mode: settings.ocrEngineMode,
       );
 
       final rawText = ocrResult.fullText.trim();

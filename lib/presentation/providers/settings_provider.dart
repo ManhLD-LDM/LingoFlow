@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/languages.dart';
 import '../../domain/entities/translation_engine.dart';
 import '../../domain/entities/subtitle_style.dart';
+import '../../domain/entities/ocr_engine_mode.dart';
 
 /// Keys used for SharedPreferences persistence
 class _PrefKeys {
@@ -16,6 +17,7 @@ class _PrefKeys {
   static const selectedEngine = 'lf_selected_engine';
   static const deepLApiKey = 'lf_deepl_api_key';
   static const ocrApiKey = 'lf_ocr_api_key';
+  static const ocrEngineMode = 'lf_ocr_engine_mode';
   static const subtitleTheme = 'lf_subtitle_theme';
   static const subtitlePlacement = 'lf_subtitle_placement';
   static const lensX = 'lf_lens_x';
@@ -34,6 +36,7 @@ class SettingsState {
   final TranslationEngine selectedEngine;
   final String deepLApiKey;
   final String ocrApiKey;
+  final OcrEngineMode ocrEngineMode;
   final SubtitleTheme subtitleTheme;
   final SubtitlePlacement subtitlePlacement;
   // Lens position/size persistence
@@ -52,6 +55,7 @@ class SettingsState {
     this.selectedEngine = TranslationEngine.google,
     this.deepLApiKey = '',
     this.ocrApiKey = '',
+    this.ocrEngineMode = OcrEngineMode.autoFallback,
     this.subtitleTheme = SubtitleTheme.cyberpunk,
     this.subtitlePlacement = SubtitlePlacement.inPlace,
     this.lensX = 200,
@@ -70,6 +74,7 @@ class SettingsState {
     TranslationEngine? selectedEngine,
     String? deepLApiKey,
     String? ocrApiKey,
+    OcrEngineMode? ocrEngineMode,
     SubtitleTheme? subtitleTheme,
     SubtitlePlacement? subtitlePlacement,
     double? lensX,
@@ -87,6 +92,7 @@ class SettingsState {
       selectedEngine: selectedEngine ?? this.selectedEngine,
       deepLApiKey: deepLApiKey ?? this.deepLApiKey,
       ocrApiKey: ocrApiKey ?? this.ocrApiKey,
+      ocrEngineMode: ocrEngineMode ?? this.ocrEngineMode,
       subtitleTheme: subtitleTheme ?? this.subtitleTheme,
       subtitlePlacement: subtitlePlacement ?? this.subtitlePlacement,
       lensX: lensX ?? this.lensX,
@@ -133,6 +139,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
       ),
       deepLApiKey: prefs.getString(_PrefKeys.deepLApiKey) ?? state.deepLApiKey,
       ocrApiKey: prefs.getString(_PrefKeys.ocrApiKey) ?? state.ocrApiKey,
+      ocrEngineMode: OcrEngineMode.fromId(
+        prefs.getString(_PrefKeys.ocrEngineMode) ?? state.ocrEngineMode.id,
+      ),
       subtitleTheme: SubtitleTheme.fromId(
         prefs.getString(_PrefKeys.subtitleTheme) ?? state.subtitleTheme.id,
       ),
@@ -211,6 +220,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final trimmed = key.trim();
     state = state.copyWith(ocrApiKey: trimmed);
     _persist(_PrefKeys.ocrApiKey, trimmed);
+  }
+
+  void setOcrEngineMode(OcrEngineMode mode) {
+    state = state.copyWith(ocrEngineMode: mode);
+    _persist(_PrefKeys.ocrEngineMode, mode.id);
   }
 
   void setSubtitleTheme(SubtitleTheme theme) {
