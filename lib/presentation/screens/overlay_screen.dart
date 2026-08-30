@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/services/native_overlay_service.dart';
 import '../../domain/entities/subtitle_style.dart';
 import '../providers/settings_provider.dart';
 import '../providers/overlay_provider.dart';
-import '../../core/services/native_overlay_service.dart';
+import '../widgets/hyper_float_bar.dart';
+import '../widgets/floating_subtitle_bubble.dart';
+import '../widgets/floating_lens.dart';
 import '../widgets/region_selector.dart';
 import '../widgets/dictionary_popup.dart';
-import '../widgets/mini_control_bar.dart';
 
 class OverlayScreen extends ConsumerStatefulWidget {
   const OverlayScreen({super.key});
@@ -17,6 +19,8 @@ class OverlayScreen extends ConsumerStatefulWidget {
 
 class _OverlayScreenState extends ConsumerState<OverlayScreen> {
   bool _isSelectingRegion = false;
+  bool _isLensActive = false;
+  bool _isSubtitleBubbleVisible = true;
 
   @override
   void initState() {
@@ -39,22 +43,17 @@ class _OverlayScreenState extends ConsumerState<OverlayScreen> {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // Floating, Draggable & Collapsible Mini Control Bar
-          MiniControlBar(
-            isSelectingRegion: _isSelectingRegion,
-            onToggleRegionSelect: () {
-              setState(() {
-                _isSelectingRegion = !_isSelectingRegion;
-              });
-            },
-            onClose: () {
-              ref.read(overlayProvider.notifier).stopScanning();
-              NativeOverlayService.setClickThrough(false);
-              Navigator.pop(context);
-            },
-          ),
+          // 1. Draggable Floating Lens Reticle if active
+          if (_isLensActive)
+            FloatingLens(
+              onClose: () {
+                setState(() {
+                  _isLensActive = false;
+                });
+              },
+            ),
 
-          // Draggable Region Selector if active
+          // 2. Draggable Region Selector if active
           if (_isSelectingRegion)
             RegionSelector(
               initialRect: overlay.selectedRegion ?? const Rect.fromLTWH(100, 100, 400, 200),
@@ -63,52 +62,18 @@ class _OverlayScreenState extends ConsumerState<OverlayScreen> {
               },
             ),
 
-          // Render Subtitles in Bottom Center Cinema Mode
-          if (settings.subtitlePlacement == SubtitlePlacement.bottomCenter && overlay.items.isNotEmpty)
-            Positioned(
-              bottom: 40,
-              left: 40,
-              right: 40,
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: theme.backgroundColor.withValues(alpha: settings.overlayOpacity),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: theme.borderColor, width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        blurRadius: 16,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: overlay.items.map((item) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          item.translatedText,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: theme.textColor,
-                            fontSize: settings.fontSize + 2,
-                            fontWeight: FontWeight.bold,
-                            height: 1.4,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
+          // 3. Floating Subtitle Stream Bubble (Draggable Xiaomi-style Bubble)
+          if (_isSubtitleBubbleVisible && !_isLensActive)
+            FloatingSubtitleBubble(
+              onClose: () {
+                setState(() {
+                  _isSubtitleBubbleVisible = false;
+                });
+              },
             ),
 
-          // Render Subtitles in In-Place Mode
-          if (settings.subtitlePlacement == SubtitlePlacement.inPlace && overlay.items.isNotEmpty)
+          // 4. In-Place Subtitles (Directly over words on screen)
+          if (settings.subtitlePlacement == SubtitlePlacement.inPlace && overlay.items.isNotEmpty && !_isLensActive)
             ...overlay.items.map((item) {
               return Positioned(
                 left: item.boundingBox.left,
@@ -157,25 +122,39 @@ class _OverlayScreenState extends ConsumerState<OverlayScreen> {
                             height: 1.35,
                           ),
                         ),
-                        if (!settings.isClickThrough) ...[
-                          const SizedBox(height: 4),
-                          const Row(
-                            children: [
-                              Icon(Icons.touch_app, color: Colors.orangeAccent, size: 12),
-                              SizedBox(width: 4),
-                              Text(
-                                'Chạm để tra từ điển & Romaji',
-                                style: TextStyle(color: Colors.orangeAccent, fontSize: 10, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ],
                       ],
                     ),
                   ),
                 ),
               );
             }),
+
+          // 5. Xiaomi-Style HyperFloat Bar (The Master Floating Controller)
+          HyperFloatBar(
+            isLensActive: _isLensActive,
+            isSelectingRegion: _isSelectingRegion,
+            isSubtitleBubbleVisible: _isSubtitleBubbleVisible,
+            onToggleLens: () {
+              setState(() {
+                _isLensActive = !_isLensActive;
+              });
+            },
+            onToggleRegionSelect: () {
+              setState(() {
+                _isSelectingRegion = !_isSelectingRegion;
+              });
+            },
+            onToggleSubtitleBubble: () {
+              setState(() {
+                _isSubtitleBubbleVisible = !_isSubtitleBubbleVisible;
+              });
+            },
+            onClose: () {
+              ref.read(overlayProvider.notifier).stopScanning();
+              NativeOverlayService.setClickThrough(false);
+              Navigator.pop(context);
+            },
+          ),
         ],
       ),
     );

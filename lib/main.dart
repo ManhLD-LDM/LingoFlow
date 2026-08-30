@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/theme/app_theme.dart';
 import 'presentation/screens/home_screen.dart';
 
 void main() async {
@@ -32,17 +33,7 @@ class LingoFlowApp extends StatelessWidget {
     return MaterialApp(
       title: 'LingoFlow',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0F172A),
-        colorScheme: const ColorScheme.dark(
-          primary: Colors.cyanAccent,
-          secondary: Colors.blueAccent,
-          surface: Color(0xFF1E293B),
-        ),
-        fontFamily: 'Segoe UI',
-        useMaterial3: true,
-      ),
+      theme: AppTheme.darkTheme,
       home: const HomeScreen(),
     );
   }
