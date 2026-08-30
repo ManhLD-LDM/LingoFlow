@@ -142,13 +142,17 @@ class _NestedButtonState extends State<NestedButton> with SingleTickerProviderSt
                         Icon(widget.icon, color: textColor, size: 18),
                         const SizedBox(width: 8),
                       ],
-                      Text(
-                        widget.label,
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
+                      Flexible(
+                        child: Text(
+                          widget.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3,
+                          ),
                         ),
                       ),
                       if (widget.trailingIcon != null) ...[

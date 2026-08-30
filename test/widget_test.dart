@@ -20,8 +20,29 @@ void main() {
     });
   });
 
-  testWidgets('HomeScreen renders title and key action buttons', (WidgetTester tester) async {
+  testWidgets('HomeScreen renders Desktop Studio layout on widescreen', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: HomeScreen(),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('LingoFlow Studio'), findsOneWidget);
+    expect(find.text('Studio Dịch Thuật'), findsOneWidget);
+    expect(find.text('MỞ OVERLAY'), findsOneWidget);
+    expect(find.text('CHỤP 1 LẦN (Alt+S)'), findsOneWidget);
+  });
+
+  testWidgets('HomeScreen renders Mobile layout on small screen', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);

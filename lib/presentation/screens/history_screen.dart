@@ -282,7 +282,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
           ),
         ),
 
-        // 3. Tab Views (Bento Grid Items)
+        // 3. Tab Views (Responsive Grid on Desktop)
         Expanded(
           child: TabBarView(
             controller: _tabController,
@@ -334,114 +334,144 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen>
       );
     }
 
+    final isWide = MediaQuery.of(context).size.width >= 800;
+
+    if (isWide) {
+      return GridView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisExtent: 130,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemCount: list.length,
+        itemBuilder: (context, index) => _buildHistoryCard(list[index], notifier),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: list.length,
       itemBuilder: (context, index) {
-        final item = list[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceShell,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: item.isFavorite
-                  ? AppColors.amberStar.withValues(alpha: 0.4)
-                  : AppColors.borderLight,
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildHistoryCard(list[index], notifier),
+        );
+      },
+    );
+  }
+
+  Widget _buildHistoryCard(HistoryItem item, HistoryNotifier notifier) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceShell,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: item.isFavorite
+              ? AppColors.amberStar.withValues(alpha: 0.4)
+              : AppColors.borderLight,
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Bar: Language Badge, Star, Speak, Copy, Delete
+          Row(
+            children: [
+              StatusBadge(
+                label: '${item.sourceLanguage.toUpperCase()} → ${item.targetLanguage.toUpperCase()}',
+                customColor: AppColors.cyanPrimary,
+              ),
+              const Spacer(),
+
+              // Star toggle
+              IconButton(
+                icon: Icon(
+                  item.isFavorite ? Icons.star : Icons.star_border,
+                  color: item.isFavorite ? AppColors.amberStar : AppColors.textMuted,
+                  size: 18,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: item.isFavorite ? 'Bỏ lưu sao' : 'Lưu vào sổ từ vựng',
+                onPressed: () => notifier.toggleFavorite(item.id),
+              ),
+              const SizedBox(width: 10),
+
+              // Speak audio
+              IconButton(
+                icon: const Icon(Icons.volume_up_outlined, color: AppColors.cyanPrimary, size: 17),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Nghe phát âm',
+                onPressed: () => _speakText(item.originalText, item.sourceLanguage),
+              ),
+              const SizedBox(width: 10),
+
+              // Copy
+              IconButton(
+                icon: const Icon(Icons.copy, color: AppColors.textSecondary, size: 15),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Sao chép bản dịch',
+                onPressed: () => _copyToClipboard(context, item.translatedText, 'bản dịch'),
+              ),
+              const SizedBox(width: 10),
+
+              // Delete single item
+              IconButton(
+                icon: const Icon(Icons.close, color: AppColors.textMuted, size: 15),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Xóa câu này',
+                onPressed: () => notifier.deleteRecord(item.id),
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top Bar: Language Badge, Star, Speak, Copy, Delete
-              Row(
+          const SizedBox(height: 8),
+
+          // Original Text
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  StatusBadge(
-                    label: '${item.sourceLanguage.toUpperCase()} → ${item.targetLanguage.toUpperCase()}',
-                    customColor: AppColors.cyanPrimary,
-                  ),
-                  const Spacer(),
-
-                  // Star toggle
-                  IconButton(
-                    icon: Icon(
-                      item.isFavorite ? Icons.star : Icons.star_border,
-                      color: item.isFavorite ? AppColors.amberStar : AppColors.textMuted,
-                      size: 20,
+                  SelectableText(
+                    item.originalText,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      height: 1.3,
                     ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: item.isFavorite ? 'Bỏ lưu sao' : 'Lưu vào sổ từ vựng',
-                    onPressed: () => notifier.toggleFavorite(item.id),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(height: 4),
 
-                  // Speak audio
-                  IconButton(
-                    icon: const Icon(Icons.volume_up_outlined, color: AppColors.cyanPrimary, size: 18),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'Nghe phát âm',
-                    onPressed: () => _speakText(item.originalText, item.sourceLanguage),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Copy
-                  IconButton(
-                    icon: const Icon(Icons.copy, color: AppColors.textSecondary, size: 16),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'Sao chép bản dịch',
-                    onPressed: () => _copyToClipboard(context, item.translatedText, 'bản dịch'),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Delete single item
-                  IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.textMuted, size: 16),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'Xóa câu này',
-                    onPressed: () => notifier.deleteRecord(item.id),
+                  // Translated Text
+                  SelectableText(
+                    item.translatedText,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      height: 1.3,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-
-              // Original Text
-              SelectableText(
-                item.originalText,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 6),
-
-              // Translated Text
-              SelectableText(
-                item.translatedText,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  height: 1.35,
-                ),
-              ),
-            ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

@@ -144,70 +144,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   /// TAB 1: Subtitle Customizer with Live Preview Box
   Widget _buildSubtitleTab(SettingsState settings, SettingsNotifier notifier) {
     final currentTheme = settings.subtitleTheme;
+    final isWide = MediaQuery.of(context).size.width >= 800;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // 1. LIVE SUBTITLE PREVIEW BOX
-        const Text(
-          'XEM TRƯỚC TRỰC TIẾP (LIVE SUBTITLE PREVIEW)',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        Container(
-          height: 140,
-          width: double.infinity,
+    final previewBox = Container(
+      height: isWide ? 180 : 130,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF030712),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF030712),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.borderLight),
+            color: currentTheme.backgroundColor.withValues(alpha: settings.overlayOpacity),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: currentTheme.borderColor, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.7),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: Center(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              decoration: BoxDecoration(
-                color: currentTheme.backgroundColor.withValues(alpha: settings.overlayOpacity),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: currentTheme.borderColor, width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.7),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '君の名は。 (Tên cậu là gì?)',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: currentTheme.textColor,
+                  fontSize: settings.fontSize,
+                  fontWeight: FontWeight.bold,
+                  height: 1.35,
+                  shadows: const [
+                    Shadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 1)),
+                  ],
+                ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '君の名は。 (Tên cậu là gì?)',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: currentTheme.textColor,
-                      fontSize: settings.fontSize,
-                      fontWeight: FontWeight.bold,
-                      height: 1.35,
-                      shadows: const [
-                        Shadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 1)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
-        const SizedBox(height: 20),
+      ),
+    );
 
-        // 2. Preset Themes
+    final controls = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Presets
         const Text('CHỦ ĐỀ MÀU PHỤ ĐỀ (PRESETS)', style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         Row(
@@ -245,9 +233,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
             );
           }).toList(),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
 
-        // 3. Font Size Slider
+        // Font Size Slider
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -277,7 +265,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         ),
         const SizedBox(height: 12),
 
-        // 4. Overlay Opacity Slider
+        // Overlay Opacity Slider
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -307,12 +295,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         ),
       ],
     );
+
+    if (isWide) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 45,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'XEM TRƯỚC TRỰC TIẾP (LIVE SUBTITLE PREVIEW)',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+                  ),
+                  const SizedBox(height: 8),
+                  previewBox,
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(flex: 55, child: SingleChildScrollView(child: controls)),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'XEM TRƯỚC TRỰC TIẾP (LIVE SUBTITLE PREVIEW)',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+        ),
+        const SizedBox(height: 8),
+        previewBox,
+        const SizedBox(height: 16),
+        controls,
+      ],
+    );
   }
 
   /// TAB 2: Translation Engine Selector
   Widget _buildTranslationTab(SettingsState settings, SettingsNotifier notifier) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    final isWide = MediaQuery.of(context).size.width >= 800;
+
+    final enginesList = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'CHỌN BỘ MÁY DỊCH THUẬT',
@@ -336,63 +367,83 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
           current: settings.selectedEngine,
           onTap: () => notifier.setSelectedEngine(TranslationEngine.deepl),
         ),
-        const SizedBox(height: 20),
+      ],
+    );
 
-        // DeepL API Key Card
-        if (settings.selectedEngine == TranslationEngine.deepl)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceShell,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderLight),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('DeepL Authentication Key', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 6),
-                const Text('Nhập key từ tài khoản DeepL API Free / Pro của bạn.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _deepLKeyController,
-                        obscureText: true,
-                        style: const TextStyle(color: AppColors.textPrimary),
-                        decoration: const InputDecoration(hintText: 'Nhập DeepL API Key...'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.cyanPrimary,
-                        foregroundColor: AppColors.textDark,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: _isValidatingKey ? null : _validateDeepLKey,
-                      child: _isValidatingKey
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textDark))
-                          : const Text('Kiểm tra Key', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
+    final deeplKeyBox = Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceShell,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('DeepL Authentication Key', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 6),
+          const Text('Nhập key từ tài khoản DeepL API Free / Pro của bạn.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _deepLKeyController,
+                  obscureText: true,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: const InputDecoration(hintText: 'Nhập DeepL API Key...'),
                 ),
-                if (_keyValidationMessage != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    _keyValidationMessage!,
-                    style: TextStyle(
-                      color: _isKeyValid == true ? AppColors.emeraldLive : AppColors.redRecord,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.cyanPrimary,
+                  foregroundColor: AppColors.textDark,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: _isValidatingKey ? null : _validateDeepLKey,
+                child: _isValidatingKey
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textDark))
+                    : const Text('Kiểm tra Key', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
+          if (_keyValidationMessage != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _keyValidationMessage!,
+              style: TextStyle(
+                color: _isKeyValid == true ? AppColors.emeraldLive : AppColors.redRecord,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (isWide) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 50, child: enginesList),
+            const SizedBox(width: 16),
+            Expanded(flex: 50, child: deeplKeyBox),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        enginesList,
+        const SizedBox(height: 16),
+        deeplKeyBox,
       ],
     );
   }
