@@ -11,6 +11,9 @@ import '../providers/history_provider.dart';
 import '../providers/overlay_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/settings_provider.dart';
+import '../widgets/desktop_sidebar.dart';
+import '../widgets/desktop_studio_view.dart';
+import '../widgets/desktop_titlebar.dart';
 import '../widgets/floating_lens.dart';
 import '../widgets/nested_button.dart';
 import '../widgets/onboarding_wizard.dart';
@@ -91,10 +94,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       targetLanguage: settings.targetLanguage,
     );
 
-    setState(() {
-      _sandboxResultText = result;
-      _isTranslating = false;
-    });
+    if (mounted) {
+      setState(() {
+        _sandboxResultText = result;
+        _isTranslating = false;
+      });
+    }
   }
 
   Future<void> _pasteFromClipboard() async {
@@ -143,7 +148,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             Icon(Icons.keyboard, color: AppColors.cyanPrimary),
             SizedBox(width: 10),
-            Text('Phím Tắt Hệ Thống', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text('Phím Tắt Toàn Năng (Desktop & Studio)', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -154,6 +159,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             _buildDialogHotkeyRow('Alt + S', 'Chụp & Dịch vùng chọn tức thì 1 lần'),
             const Divider(color: AppColors.borderLight),
             _buildDialogHotkeyRow('Alt + X', 'Bật / Tắt chế độ Xuyên Thấu (Click-Through)'),
+            const Divider(color: AppColors.borderLight),
+            _buildDialogHotkeyRow('Ctrl + Enter', 'Dịch văn bản ngay trong Studio Editor'),
           ],
         ),
         actions: [
@@ -203,6 +210,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktopWidth = screenWidth >= 800;
 
     // If direct lens mode active on desktop
     if (_isLensModeActive) {
@@ -222,33 +231,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
 
+    // ==================== DESKTOP ADAPTIVE LAYOUT (Width >= 800px) ====================
+    if (isDesktopWidth) {
+      return Scaffold(
+        backgroundColor: AppColors.bgDark,
+        appBar: DesktopTitlebar(
+          onHelpPressed: _showHotkeyGuide,
+        ),
+        body: Row(
+          children: [
+            // Left Collapsible Glass Sidebar
+            DesktopSidebar(
+              selectedIndex: _currentTabIndex,
+              onDestinationSelected: (index) {
+                setState(() {
+                  _currentTabIndex = index;
+                });
+              },
+            ),
+
+            // Main Desktop Content View
+            Expanded(
+              child: IndexedStack(
+                index: _currentTabIndex,
+                children: const [
+                  DesktopStudioView(),
+                  ProfilesScreen(isEmbedded: true),
+                  HistoryScreen(isEmbedded: true),
+                  SettingsScreen(isEmbedded: true),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ==================== MOBILE ADAPTIVE LAYOUT (Width < 800px) ====================
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Row(
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.translate, color: AppColors.textDark, size: 18),
-            ),
-            const SizedBox(width: 10),
-            const Text(
+            Text(
               'LingoFlow',
               style: TextStyle(
                 fontWeight: FontWeight.w800,
-                fontSize: 20,
+                fontSize: 18,
                 letterSpacing: 0.5,
                 color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(width: 8),
-            const StatusBadge(label: 'PRO V2', isLive: true),
+            SizedBox(width: 8),
+            StatusBadge(label: 'PRO', isLive: true),
           ],
         ),
         actions: [
@@ -273,7 +311,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: IndexedStack(
               index: _currentTabIndex,
               children: [
-                _buildDashboardTab(settings),
+                _buildMobileDashboardTab(settings),
                 const ProfilesScreen(isEmbedded: true),
                 const HistoryScreen(isEmbedded: true),
                 const SettingsScreen(isEmbedded: true),
@@ -293,12 +331,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// TAB 0: Main Dashboard
-  Widget _buildDashboardTab(SettingsState settings) {
+  /// Mobile Dashboard Tab
+  Widget _buildMobileDashboardTab(SettingsState settings) {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
-        // 1. HERO CARD: Launch Xiaomi Floating Widget Button (Doppelrand Architecture)
+        // 1. HERO CARD: Launch Xiaomi Floating Widget Button
         Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
@@ -484,25 +522,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.edit_note, color: AppColors.cyanPrimary, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'HỘP TEST DỊCH NHANH',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.3,
+                  const Icon(Icons.edit_note, color: AppColors.cyanPrimary, size: 18),
+                  const SizedBox(width: 6),
+                  const Expanded(
+                    child: Text(
+                      'HỘP TEST DỊCH NHANH',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.3,
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   TextButton.icon(
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.cyanPrimary,
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     ),
-                    icon: const Icon(Icons.content_paste, size: 14),
-                    label: const Text('Dán Clipboard', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.content_paste, size: 13),
+                    label: const Text('Dán', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                     onPressed: _pasteFromClipboard,
                   ),
                 ],
@@ -598,7 +639,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// Floating Glass Bottom Navigation Bar (4 items)
+  /// Floating Glass Bottom Navigation Bar (Mobile)
   Widget _buildFloatingBottomNav() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
