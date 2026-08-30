@@ -1,47 +1,100 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/history_provider.dart';
-import '../../domain/entities/history_item.dart';
 import '../../core/services/export_service.dart';
+import '../../core/services/tts_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../domain/entities/history_item.dart';
+import '../providers/history_provider.dart';
+import '../widgets/status_badge.dart';
 
-class HistoryScreen extends ConsumerWidget {
-  const HistoryScreen({super.key});
+class HistoryScreen extends ConsumerStatefulWidget {
+  final bool isEmbedded;
+
+  const HistoryScreen({super.key, this.isEmbedded = false});
+
+  @override
+  ConsumerState<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends ConsumerState<HistoryScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _copyToClipboard(BuildContext context, String text, String label) {
+    HapticFeedback.lightImpact();
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Đã sao chép $label vào clipboard!'),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: AppColors.cyanPrimary, size: 18),
+            const SizedBox(width: 8),
+            Text('Đã sao chép $label vào clipboard!'),
+          ],
+        ),
         duration: const Duration(seconds: 2),
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: AppColors.surfaceModal,
         behavior: SnackBarBehavior.floating,
       ),
     );
+  }
+
+  void _speakText(String text, String lang) {
+    HapticFeedback.lightImpact();
+    TtsService.speak(text, language: lang);
   }
 
   void _showClearConfirmDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Xoá toàn bộ lịch sử?', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.surfaceModal,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.borderLight),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_sweep_outlined, color: AppColors.redRecord),
+            SizedBox(width: 10),
+            Text('Xoá toàn bộ lịch sử?', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+          ],
+        ),
         content: const Text(
-          'Hành động này sẽ xoá tất cả các câu đã lưu trong lịch sử dịch. Các từ vựng đã đánh dấu sao cũng sẽ bị xoá.',
-          style: TextStyle(color: Colors.white70),
+          'Hành động này sẽ xoá tất cả các câu đã lưu trong lịch sử dịch. Bạn có chắc chắn muốn thực hiện?',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('HỦY', style: TextStyle(color: Colors.white60)),
+            child: const Text('HỦY', style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.redRecord,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
               ref.read(historyProvider.notifier).clearAll();
               Navigator.pop(ctx);
             },
-            child: const Text('XOÁ HẾT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text('XOÁ HẾT', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -51,289 +104,344 @@ class HistoryScreen extends ConsumerWidget {
   void _showExportDialog(BuildContext context, List<HistoryItem> items) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E293B),
+      backgroundColor: AppColors.surfaceModal,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'XUẤT DỮ LIỆU TỪ VỰNG / LỊCH SỬ',
-              style: TextStyle(color: Colors.cyanAccent, fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            ...ExportFormat.values.map(
-              (fmt) => ListTile(
-                leading: const Icon(Icons.file_download_outlined, color: Colors.cyanAccent),
-                title: Text(fmt.label, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                trailing: const Icon(Icons.copy, color: Colors.white60, size: 18),
-                onTap: () {
-                  final content = ExportService.exportItems(items, fmt);
-                  Clipboard.setData(ClipboardData(text: content));
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Đã sao chép ${items.length} từ theo định dạng ${fmt.label} vào Clipboard!'),
-                      duration: const Duration(seconds: 3),
-                      backgroundColor: const Color(0xFF0F172A),
-                    ),
-                  );
-                },
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              const Row(
+                children: [
+                  Icon(Icons.ios_share, color: AppColors.cyanPrimary, size: 20),
+                  SizedBox(width: 10),
+                  Text(
+                    'XUẤT SỔ TỪ VỰNG / ANKI FLASHCARD',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              ...ExportFormat.values.map(
+                (fmt) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.cyanPrimary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.file_download_outlined, color: AppColors.cyanPrimary, size: 18),
+                  ),
+                  title: Text(fmt.label, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+                  trailing: const Icon(Icons.copy, color: AppColors.textMuted, size: 18),
+                  onTap: () {
+                    final content = ExportService.exportItems(items, fmt);
+                    Clipboard.setData(ClipboardData(text: content));
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Đã sao chép ${items.length} từ theo định dạng ${fmt.label} vào Clipboard!'),
+                        duration: const Duration(seconds: 3),
+                        backgroundColor: AppColors.surfaceModal,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final historyState = ref.watch(historyProvider);
     final notifier = ref.read(historyProvider.notifier);
     final items = historyState.filteredItems;
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF1E293B),
-          elevation: 0,
-          title: const Text('Lịch sử & Sổ từ vựng', style: TextStyle(color: Colors.white, fontSize: 18)),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          actions: [
-            if (historyState.items.isNotEmpty) ...[
+    final starredItems = items.where((it) => it.isFavorite).toList();
+
+    Widget body = Column(
+      children: [
+        // 1. Search Bar & Filter Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Tìm kiếm từ hoặc bản dịch...',
+                    prefixIcon: const Icon(Icons.search, color: AppColors.textMuted, size: 18),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 16),
+                            onPressed: () {
+                              _searchController.clear();
+                              notifier.setSearchQuery('');
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: AppColors.surfaceCore,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.borderLight),
+                    ),
+                  ),
+                  onChanged: (val) {
+                    notifier.setSearchQuery(val);
+                    setState(() {});
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Export Button
               IconButton(
-                icon: const Icon(Icons.download, color: Colors.cyanAccent),
-                tooltip: 'Xuất dữ liệu (Anki / CSV / TXT)',
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.surfaceCore,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: const BorderSide(color: AppColors.borderLight),
+                  ),
+                ),
+                icon: const Icon(Icons.download_rounded, color: AppColors.cyanPrimary, size: 20),
+                tooltip: 'Xuất Anki / CSV',
                 onPressed: () => _showExportDialog(context, items),
               ),
+
+              // Clear All Button
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                tooltip: 'Xoá tất cả',
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.surfaceCore,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: const BorderSide(color: AppColors.borderLight),
+                  ),
+                ),
+                icon: const Icon(Icons.delete_outline, color: AppColors.redRecord, size: 20),
+                tooltip: 'Xóa toàn bộ',
                 onPressed: () => _showClearConfirmDialog(context, ref),
               ),
             ],
-            const SizedBox(width: 8),
-          ],
-          bottom: TabBar(
-            indicatorColor: Colors.cyanAccent,
-            labelColor: Colors.cyanAccent,
-            unselectedLabelColor: Colors.white60,
-            onTap: (index) {
-              notifier.setFilterFavorites(index == 1);
-            },
+          ),
+        ),
+
+        // 2. Custom Tabs (Tất Cả vs Đã Gắn Sao ⭐)
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceCore,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: TabBar(
+            controller: _tabController,
+            indicatorSize: TabBarIndicatorSize.tab,
+            dividerColor: Colors.transparent,
+            indicator: BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            labelColor: AppColors.textDark,
+            unselectedLabelColor: AppColors.textSecondary,
+            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
             tabs: [
-              Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.history, size: 18),
-                    const SizedBox(width: 8),
-                    Text('Tất cả (${historyState.items.length})'),
-                  ],
-                ),
-              ),
-              Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.star, size: 18, color: Colors.amberAccent),
-                    const SizedBox(width: 8),
-                    Text('Từ vựng (${historyState.items.where((e) => e.isFavorite).length})'),
-                  ],
-                ),
-              ),
+              Tab(text: 'TẤT CẢ LỊCH SỬ (${items.length})'),
+              Tab(text: 'SỔ TỪ VỰNG ⭐ (${starredItems.length})'),
             ],
           ),
         ),
-        body: Column(
-          children: [
-            // Search Box
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TextField(
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Tìm kiếm theo từ gốc hoặc bản dịch...',
-                  hintStyle: const TextStyle(color: Colors.white38),
-                  prefixIcon: const Icon(Icons.search, color: Colors.cyanAccent, size: 20),
-                  filled: true,
-                  fillColor: const Color(0xFF1E293B),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                onChanged: (val) => notifier.setSearchQuery(val),
-              ),
-            ),
 
-            // List of records
-            Expanded(
-              child: items.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            historyState.filterFavoritesOnly ? Icons.star_border : Icons.history_edu,
-                            size: 64,
-                            color: Colors.white24,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            historyState.filterFavoritesOnly
-                                ? 'Chưa có từ vựng nào được đánh dấu sao ⭐'
-                                : 'Chưa có lịch sử dịch thuật nào.',
-                            style: const TextStyle(color: Colors.white54, fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: items.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        return _buildHistoryCard(context, ref, item);
-                      },
-                    ),
-            ),
-          ],
+        // 3. Tab Views (Bento Grid Items)
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildHistoryList(items, notifier),
+              _buildHistoryList(starredItems, notifier),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (widget.isEmbedded) {
+      return body;
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.bgDark,
+      appBar: AppBar(
+        title: const Text('Lịch Sử & Sổ Từ Vựng'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
+      body: body,
     );
   }
 
-  Widget _buildHistoryCard(BuildContext context, WidgetRef ref, HistoryItem item) {
-    final formattedTime =
-        '${item.timestamp.hour.toString().padLeft(2, '0')}:${item.timestamp.minute.toString().padLeft(2, '0')} • ${item.timestamp.day}/${item.timestamp.month}';
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: item.isFavorite
-              ? Colors.amberAccent.withValues(alpha: 0.4)
-              : Colors.white.withValues(alpha: 0.08),
+  Widget _buildHistoryList(List<HistoryItem> list, HistoryNotifier notifier) {
+    if (list.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history_toggle_off, size: 54, color: AppColors.textMuted.withValues(alpha: 0.5)),
+            const SizedBox(height: 12),
+            const Text(
+              'Chưa có dữ liệu dịch nào',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Các câu được dịch sẽ tự động lưu vào đây.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header: Language badge & timestamp & Star action
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  '${item.sourceLanguage.toUpperCase()} → ${item.targetLanguage.toUpperCase()}',
-                  style: const TextStyle(
-                    color: Colors.cyanAccent,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    formattedTime,
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(
-                      item.isFavorite ? Icons.star : Icons.star_border,
-                      color: item.isFavorite ? Colors.amberAccent : Colors.white38,
-                      size: 20,
-                    ),
-                    tooltip: item.isFavorite ? 'Bỏ lưu từ vựng' : 'Lưu vào sổ từ vựng',
-                    onPressed: () {
-                      ref.read(historyProvider.notifier).toggleFavorite(item.id);
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white38, size: 18),
-                    tooltip: 'Xoá mục này',
-                    onPressed: () {
-                      ref.read(historyProvider.notifier).deleteRecord(item.id);
-                    },
-                  ),
-                ],
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: list.length,
+      itemBuilder: (context, index) {
+        final item = list[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceShell,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: item.isFavorite
+                  ? AppColors.amberStar.withValues(alpha: 0.4)
+                  : AppColors.borderLight,
+              width: 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-
-          // Original Text
-          Text(
-            item.originalText,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Translated Text
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0F172A),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    item.translatedText,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Bar: Language Badge, Star, Speak, Copy, Delete
+              Row(
+                children: [
+                  StatusBadge(
+                    label: '${item.sourceLanguage.toUpperCase()} → ${item.targetLanguage.toUpperCase()}',
+                    customColor: AppColors.cyanPrimary,
                   ),
+                  const Spacer(),
+
+                  // Star toggle
+                  IconButton(
+                    icon: Icon(
+                      item.isFavorite ? Icons.star : Icons.star_border,
+                      color: item.isFavorite ? AppColors.amberStar : AppColors.textMuted,
+                      size: 20,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: item.isFavorite ? 'Bỏ lưu sao' : 'Lưu vào sổ từ vựng',
+                    onPressed: () => notifier.toggleFavorite(item.id),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Speak audio
+                  IconButton(
+                    icon: const Icon(Icons.volume_up_outlined, color: AppColors.cyanPrimary, size: 18),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Nghe phát âm',
+                    onPressed: () => _speakText(item.originalText, item.sourceLanguage),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Copy
+                  IconButton(
+                    icon: const Icon(Icons.copy, color: AppColors.textSecondary, size: 16),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Sao chép bản dịch',
+                    onPressed: () => _copyToClipboard(context, item.translatedText, 'bản dịch'),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Delete single item
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.textMuted, size: 16),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Xóa câu này',
+                    onPressed: () => notifier.deleteRecord(item.id),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Original Text
+              SelectableText(
+                item.originalText,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  height: 1.35,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.copy, color: Colors.cyanAccent, size: 16),
-                  tooltip: 'Sao chép bản dịch',
-                  onPressed: () => _copyToClipboard(context, item.translatedText, 'bản dịch'),
+              ),
+              const SizedBox(height: 6),
+
+              // Translated Text
+              SelectableText(
+                item.translatedText,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

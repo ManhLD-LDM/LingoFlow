@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import '../providers/profile_provider.dart';
 
 class ProfilesScreen extends ConsumerStatefulWidget {
-  const ProfilesScreen({super.key});
+  final bool isEmbedded;
+
+  const ProfilesScreen({super.key, this.isEmbedded = false});
 
   @override
   ConsumerState<ProfilesScreen> createState() => _ProfilesScreenState();
@@ -27,30 +31,40 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: AppColors.surfaceModal,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.cyanAccent.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.borderLight),
         ),
-        title: const Text('Tạo Profile Mới', style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: const Row(
+          children: [
+            Icon(Icons.sports_esports_outlined, color: AppColors.cyanPrimary),
+            SizedBox(width: 10),
+            Text('Tạo Hồ Sơ Game Mới', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+          ],
+        ),
         content: TextField(
           controller: _profileNameController,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: 'Nhập tên Game / Manga (VD: Fate/Grand Order)...',
-            hintStyle: const TextStyle(color: Colors.white38),
+            hintText: 'VD: Fate/Grand Order, Genshin, Honkai...',
+            hintStyle: const TextStyle(color: AppColors.textMuted),
             filled: true,
-            fillColor: const Color(0xFF0F172A),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            fillColor: AppColors.surfaceCore,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy', style: TextStyle(color: Colors.white60)),
+            child: const Text('HỦY', style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent, foregroundColor: Colors.black),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.cyanPrimary,
+              foregroundColor: AppColors.textDark,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
               final name = _profileNameController.text.trim();
               if (name.isNotEmpty) {
@@ -58,7 +72,7 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('Tạo Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('TẠO PROFILE', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -69,6 +83,7 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
     final src = _sourceTermController.text.trim();
     final tgt = _targetTermController.text.trim();
     if (src.isNotEmpty && tgt.isNotEmpty) {
+      HapticFeedback.lightImpact();
       ref.read(profileProvider.notifier).addGlossaryTerm(src, tgt);
       _sourceTermController.clear();
       _targetTermController.clear();
@@ -81,225 +96,280 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
     final activeProfile = profileState.activeProfile;
     final notifier = ref.read(profileProvider.notifier);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Hồ Sơ Game & Từ Điển Thuật Ngữ (Glossary)', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+    Widget content = ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      children: [
+        // 1. Profile Switcher Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'DANH SÁCH HỒ SƠ GAME',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.cyanPrimary,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              ),
+              icon: const Icon(Icons.add_circle_outline, size: 16),
+              label: const Text('+ Thêm Profile Game', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              onPressed: _showAddProfileDialog,
+            ),
+          ],
         ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // Section 1: Profiles Switcher
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'HỒ SƠ GAME ĐANG CHỌN (ACTIVE PROFILE)',
-                style: TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.cyanAccent,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                onPressed: _showAddProfileDialog,
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Thêm Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    isExpanded: true,
-                    dropdownColor: const Color(0xFF1E293B),
-                    value: activeProfile.id,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    items: profileState.profiles.map((p) {
-                      return DropdownMenuItem(
-                        value: p.id,
-                        child: Row(
-                          children: [
-                            Icon(
-                              p.id == activeProfile.id ? Icons.gamepad : Icons.sports_esports_outlined,
-                              color: Colors.cyanAccent,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                            const SizedBox(width: 8),
-                            Text(
-                              '(${p.glossary.length} thuật ngữ)',
-                              style: const TextStyle(color: Colors.white38, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) notifier.setActiveProfile(val);
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
+        const SizedBox(height: 8),
 
-          // Section 2: Custom Glossary Manager
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'BỘ TỪ ĐIỂN THUẬT NGỮ CỦA "${activeProfile.name.toUpperCase()}"',
-                style: const TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                '${activeProfile.glossary.length} từ',
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Thuật ngữ trong bảng này sẽ tự động thay thế chuẩn xác khi dịch thuật, bảo toàn tên riêng/kỹ năng nhân vật.',
-            style: TextStyle(color: Colors.white60, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
+        // Horizontal Profile Cards Carousel
+        SizedBox(
+          height: 100,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: profileState.profiles.length,
+            itemBuilder: (context, index) {
+              final p = profileState.profiles[index];
+              final isActive = p.id == activeProfile.id;
 
-          // Add term input
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white12),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _sourceTermController,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    decoration: const InputDecoration(
-                      hintText: 'Từ gốc (VD: 宝具 / HP)...',
-                      hintStyle: TextStyle(color: Colors.white38),
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Icon(Icons.arrow_forward, size: 16, color: Colors.cyanAccent),
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _targetTermController,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    decoration: const InputDecoration(
-                      hintText: 'Nghĩa dịch (VD: Bảo Khí / Máu)...',
-                      hintStyle: TextStyle(color: Colors.white38),
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.cyanAccent,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  onPressed: _addGlossaryTerm,
-                  child: const Text('Thêm từ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Glossary Table / List
-          if (activeProfile.glossary.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(32),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Column(
-                children: [
-                  Icon(Icons.menu_book, color: Colors.white24, size: 36),
-                  SizedBox(height: 8),
-                  Text('Chưa có thuật ngữ riêng nào cho profile này.', style: TextStyle(color: Colors.white54, fontSize: 13)),
-                  SizedBox(height: 4),
-                  Text('Nhập từ gốc và nghĩa dịch ở trên để thêm vào từ điển!', style: TextStyle(color: Colors.white38, fontSize: 11)),
-                ],
-              ),
-            )
-          else
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: activeProfile.glossary.length,
-                separatorBuilder: (context, index) => const Divider(color: Colors.white10, height: 1),
-                itemBuilder: (ctx, idx) {
-                  final entry = activeProfile.glossary.entries.elementAt(idx);
-                  return ListTile(
-                    title: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0F172A),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.3)),
-                          ),
-                          child: Text(entry.key, style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 13)),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 10),
-                          child: Icon(Icons.arrow_right_alt, color: Colors.white38, size: 18),
-                        ),
-                        Expanded(
-                          child: Text(entry.value, style: const TextStyle(color: Colors.white, fontSize: 13)),
+              return Container(
+                width: 170,
+                margin: const EdgeInsets.only(right: 12),
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    notifier.setActiveProfile(p.id);
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? AppColors.cyanPrimary.withValues(alpha: 0.15)
+                          : AppColors.surfaceShell,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isActive ? AppColors.cyanPrimary : AppColors.borderLight,
+                        width: isActive ? 1.5 : 1.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isActive ? AppColors.cyanPrimary : Colors.black)
+                              .withValues(alpha: isActive ? 0.2 : 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
-                      onPressed: () => notifier.removeGlossaryTerm(entry.key),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.sports_esports,
+                              color: isActive ? AppColors.cyanPrimary : AppColors.textMuted,
+                              size: 18,
+                            ),
+                            const Spacer(),
+                            if (p.id != 'default')
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: AppColors.redRecord, size: 16),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                tooltip: 'Xóa profile này',
+                                onPressed: () => notifier.deleteProfile(p.id),
+                              ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              p.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isActive ? AppColors.cyanPrimary : AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${p.glossary.length} thuật ngữ',
+                              style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  );
-                },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // 2. Active Profile Glossary Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceShell,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.menu_book, color: AppColors.cyanPrimary, size: 20),
+                  const SizedBox(width: 10),
+                  Text(
+                    'TỪ ĐIỂN THUẬT NGỮ: ${activeProfile.name.toUpperCase()}',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
               ),
-            ),
-        ],
+              const SizedBox(height: 8),
+              const Text(
+                'Các từ ngữ này sẽ được ưu tiên dịch chính xác theo nghĩa riêng của game thay vì dịch máy thông thường.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+
+              // Inputs for new Glossary Term
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _sourceTermController,
+                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
+                      decoration: const InputDecoration(
+                        hintText: 'Từ gốc (VD: マスター)',
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.arrow_forward, color: AppColors.cyanPrimary, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _targetTermController,
+                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
+                      decoration: const InputDecoration(
+                        hintText: 'Dịch sang (VD: Master)',
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.cyanPrimary,
+                      foregroundColor: AppColors.textDark,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.add, size: 20),
+                    tooltip: 'Thêm thuật ngữ',
+                    onPressed: _addGlossaryTerm,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(color: AppColors.borderLight, height: 1),
+              const SizedBox(height: 14),
+
+              // Glossary Terms List
+              if (activeProfile.glossary.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'Chưa có thuật ngữ nào. Hãy thêm từ vựng để cá nhân hóa bản dịch game!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                    ),
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: activeProfile.glossary.entries.map((e) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCore,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.borderLight),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            e.key,
+                            style: const TextStyle(
+                              color: AppColors.cyanPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.arrow_forward, color: AppColors.textMuted, size: 12),
+                          const SizedBox(width: 6),
+                          Text(
+                            e.value,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          InkWell(
+                            onTap: () {
+                              notifier.removeGlossaryTerm(e.key);
+                            },
+                            child: const Icon(Icons.close, color: AppColors.redRecord, size: 14),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (widget.isEmbedded) {
+      return content;
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.bgDark,
+      appBar: AppBar(
+        title: const Text('Hồ Sơ Game & Thuật Ngữ'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
+      body: content,
     );
   }
 }

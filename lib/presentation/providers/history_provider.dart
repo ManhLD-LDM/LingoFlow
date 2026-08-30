@@ -53,7 +53,7 @@ class HistoryState {
 class HistoryNotifier extends Notifier<HistoryState> {
   @override
   HistoryState build() {
-    loadHistory();
+    Future.microtask(() => loadHistory());
     return const HistoryState(isLoading: true);
   }
 

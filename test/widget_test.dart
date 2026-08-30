@@ -33,10 +33,10 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('LingoFlow'), findsOneWidget);
-    expect(find.text('BẬT KHUNG DỊCH'), findsOneWidget);
-    expect(find.text('Kiểm tra Dịch thuật (Live Translation Test)'), findsOneWidget);
+    expect(find.text('KÍCH HOẠT FLOATING WIDGET'), findsOneWidget);
+    expect(find.text('HỘP TEST DỊCH NHANH'), findsOneWidget);
   });
 }

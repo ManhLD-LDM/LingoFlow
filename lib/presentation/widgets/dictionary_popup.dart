@@ -1,8 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/dictionary_service.dart';
 import '../../core/services/tts_service.dart';
+import '../../core/theme/app_colors.dart';
 import '../providers/history_provider.dart';
 
 class DictionaryPopup extends ConsumerStatefulWidget {
@@ -23,8 +25,11 @@ class DictionaryPopup extends ConsumerStatefulWidget {
     required String sourceLang,
     required String targetLang,
   }) {
-    return showDialog(
+    // Show as a modern Glass Bottom Sheet for thumb-friendly mobile interaction
+    return showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (_) => DictionaryPopup(
         word: word,
         sourceLang: sourceLang,
@@ -52,20 +57,32 @@ class _DictionaryPopupState extends ConsumerState<DictionaryPopup> {
   }
 
   void _playPronunciation(String word) {
+    HapticFeedback.lightImpact();
     TtsService.speak(word, language: widget.sourceLang);
+  }
+
+  void _saveToVocabulary(WordDefinition def) {
+    HapticFeedback.mediumImpact();
+    ref.read(historyProvider.notifier).addRecord(
+      originalText: widget.word,
+      translatedText: def.definition,
+      sourceLanguage: widget.sourceLang,
+      targetLanguage: widget.targetLang,
+    );
+    setState(() {
+      _isSaved = true;
+    });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.volume_up, color: Colors.cyanAccent, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text('Đang phát âm: "$word"'),
-            ),
+            Icon(Icons.star, color: AppColors.amberStar, size: 18),
+            SizedBox(width: 8),
+            Text('Đã lưu vào Sổ từ vựng yêu thích! ⭐'),
           ],
         ),
-        duration: const Duration(seconds: 2),
-        backgroundColor: const Color(0xFF0F172A),
+        duration: Duration(seconds: 2),
+        backgroundColor: AppColors.surfaceModal,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -73,158 +90,219 @@ class _DictionaryPopupState extends ConsumerState<DictionaryPopup> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF1E293B),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.cyanAccent.withValues(alpha: 0.3)),
-      ),
-      contentPadding: const EdgeInsets.all(20),
-      content: FutureBuilder<WordDefinition>(
-        future: _lookupFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const SizedBox(
-              height: 120,
-              child: Center(
-                child: CircularProgressIndicator(color: Colors.cyanAccent),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceModal.withValues(alpha: 0.95),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(color: AppColors.borderLight, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.8),
+                blurRadius: 28,
+                offset: const Offset(0, -6),
               ),
-            );
-          }
+            ],
+          ),
+          child: SafeArea(
+            child: FutureBuilder<WordDefinition>(
+              future: _lookupFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 160,
+                    child: Center(
+                      child: CircularProgressIndicator(color: AppColors.cyanPrimary),
+                    ),
+                  );
+                }
 
-          final def = snapshot.data ??
-              WordDefinition(word: widget.word, reading: '', definition: widget.word);
+                final def = snapshot.data ??
+                    WordDefinition(word: widget.word, reading: '', definition: widget.word);
 
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Word & Pronunciation/Reading & Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top Drag Pill Handle
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Header row with Term & Actions
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (def.reading.isNotEmpty)
-                          Text(
-                            def.reading,
-                            style: const TextStyle(
-                              color: Colors.cyanAccent,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
                                 def.word,
                                 style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
+                                  color: AppColors.textPrimary,
+                                  fontSize: 24,
                                   fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.3,
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.volume_up_outlined, color: Colors.cyanAccent, size: 22),
-                              tooltip: 'Phát âm giọng đọc AI',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: () => _playPronunciation(def.word),
-                            ),
-                          ],
+                              if (def.reading.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.cyanPrimary.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        def.reading,
+                                        style: const TextStyle(
+                                          color: AppColors.cyanPrimary,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      '(Phiên âm / Romaji)',
+                                      style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+
+                        // Pronounce button
+                        IconButton(
+                          icon: const Icon(Icons.volume_up, color: AppColors.cyanPrimary, size: 22),
+                          tooltip: 'Phát âm',
+                          onPressed: () => _playPronunciation(def.word),
+                        ),
+
+                        // Star / Bookmark button
+                        IconButton(
+                          icon: Icon(
+                            _isSaved ? Icons.star : Icons.star_border,
+                            color: _isSaved ? AppColors.amberStar : AppColors.textSecondary,
+                            size: 22,
+                          ),
+                          tooltip: 'Lưu vào Sổ từ vựng',
+                          onPressed: () => _saveToVocabulary(def),
+                        ),
+
+                        // Close button
+                        IconButton(
+                          icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+                          onPressed: () => Navigator.pop(context),
                         ),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      _isSaved ? Icons.star : Icons.star_border,
-                      color: _isSaved ? Colors.amberAccent : Colors.white60,
-                      size: 26,
+                    const SizedBox(height: 16),
+                    const Divider(color: AppColors.borderLight, height: 1),
+                    const SizedBox(height: 16),
+
+                    // Definition Container
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCore,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.borderLight),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.auto_stories_outlined, color: AppColors.cyanPrimary, size: 16),
+                              SizedBox(width: 8),
+                              Text(
+                                'Ý NGHĨA & ĐỊNH NGHĨA',
+                                style: TextStyle(
+                                  color: AppColors.cyanPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          SelectableText(
+                            def.definition,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 15,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    tooltip: 'Lưu vào sổ từ vựng',
-                    onPressed: () {
-                      setState(() {
-                        _isSaved = !_isSaved;
-                      });
-                      ref.read(historyProvider.notifier).addRecord(
-                        originalText: def.word,
-                        translatedText: '${def.definition} ${def.reading.isNotEmpty ? "(${def.reading})" : ""}'.trim(),
-                        sourceLanguage: widget.sourceLang,
-                        targetLanguage: widget.targetLang,
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Đã lưu từ vựng vào Sổ Từ Vựng ⭐'),
-                          duration: Duration(seconds: 2),
-                          backgroundColor: Color(0xFF0F172A),
+                    const SizedBox(height: 16),
+
+                    // Bottom Action Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.textPrimary,
+                              side: const BorderSide(color: AppColors.borderLight),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon: const Icon(Icons.copy, size: 16),
+                            label: const Text('Sao chép từ'),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: def.word));
+                              Navigator.pop(context);
+                            },
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const Divider(color: Colors.white12, height: 24),
-
-              // Definition
-              const Text(
-                'Ý nghĩa (Definition):',
-                style: TextStyle(color: Colors.white60, fontSize: 12),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  def.definition,
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500),
-                ),
-              ),
-
-              // Additional POS details
-              if (def.examples.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                ...def.examples.map(
-                  (ex) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      ex,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.cyanPrimary,
+                              foregroundColor: AppColors.textDark,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon: const Icon(Icons.translate, size: 16),
+                            label: const Text('Dịch chi tiết', style: TextStyle(fontWeight: FontWeight.bold)),
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-              ],
-            ],
-          );
-        },
-      ),
-      actions: [
-        TextButton.icon(
-          onPressed: () {
-            Clipboard.setData(ClipboardData(text: widget.word));
-            Navigator.pop(context);
-          },
-          icon: const Icon(Icons.copy, size: 16, color: Colors.cyanAccent),
-          label: const Text('Sao chép', style: TextStyle(color: Colors.cyanAccent)),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF334155),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ],
+                );
+              },
+            ),
           ),
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Đóng', style: TextStyle(color: Colors.white)),
         ),
-      ],
+      ),
     );
   }
 }
